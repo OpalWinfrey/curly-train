@@ -31,6 +31,10 @@ export function TopHitCard({ hits, totalCount, onViewAll }: Props) {
           <Text style={[styles.colLabel, { width: 58, textAlign: 'right' }]}>Pull Rate</Text>
           <Text style={[styles.colLabel, { width: 40, textAlign: 'right' }]}>EV</Text>
         </View>
+        <View style={styles.sortRow}>
+          <Text style={styles.sortLabel}>Sort by: </Text>
+          <Text style={styles.sortValue}>EV Contribution ↓</Text>
+        </View>
 
         {hits.map((hit, i) => (
           <CardRow key={hit.name} hit={hit} isLast={i === hits.length - 1} />
@@ -84,4 +88,13 @@ const styles = StyleSheet.create({
     color: Colors.accent,
     letterSpacing: -0.2,
   },
+  sortRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border2,
+  },
+  sortLabel: { fontSize: 9, fontWeight: '500', color: Colors.text3 },
+  sortValue: { fontSize: 9, fontWeight: '700', color: Colors.accent },
 });

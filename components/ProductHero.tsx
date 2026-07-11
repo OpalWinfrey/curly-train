@@ -1,16 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Defs, LinearGradient as SvgGrad, Stop, Path } from 'react-native-svg';
-import { Colors, Radius, Spacing, Typography } from './tokens';
-
-interface Metric {
-  label: string;
-  value: string;
-  sub: string;
-  isScore?: boolean;
-  score?: number;
-}
+import { Colors, Radius, Spacing } from './tokens';
 
 interface Props {
   setCode: string;
@@ -18,38 +9,11 @@ interface Props {
   title: string;
   subtitle: string;
   releaseDate: string;
-  metrics: [Metric, Metric, Metric];
+  price: string;
+  priceChange: string;
 }
 
-function MiniGauge({ score }: { score: number }) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(anim, { toValue: score / 100, duration: 900, delay: 400, useNativeDriver: false }).start();
-  }, []);
-
-  const R = 14;
-  const CIRC = 2 * Math.PI * R;
-  const ARC = CIRC * 0.75;
-
-  return (
-    <View style={{ width: 36, height: 36, position: 'relative' }}>
-      <Svg width={36} height={36} viewBox="0 0 36 36">
-        <Defs>
-          <SvgGrad id="gaugeG" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor={Colors.success} />
-            <Stop offset="1" stopColor="#34D399" />
-          </SvgGrad>
-        </Defs>
-        <Circle cx={18} cy={18} r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={3}
-          strokeLinecap="round" strokeDasharray={`${ARC} ${CIRC}`} transform="rotate(135 18 18)" />
-        <Circle cx={18} cy={18} r={R} fill="none" stroke="url(#gaugeG)" strokeWidth={3}
-          strokeLinecap="round" strokeDasharray={`${ARC * (score / 100)} ${CIRC}`} transform="rotate(135 18 18)" />
-      </Svg>
-    </View>
-  );
-}
-
-export function ProductHero({ setCode, year, title, subtitle, releaseDate, metrics }: Props) {
+export function ProductHero({ setCode, year, title, subtitle, releaseDate, price, priceChange }: Props) {
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -65,9 +29,8 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, metri
 
   return (
     <View style={styles.container}>
-      {/* Row: box art + info */}
       <View style={styles.heroRow}>
-        {/* Box Art Placeholder */}
+        {/* Box art */}
         <View style={styles.boxArtWrap}>
           <LinearGradient
             colors={['#1A0840', '#0A0520', '#060211']}
@@ -83,7 +46,6 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, metri
                 style={StyleSheet.absoluteFill}
               />
             </Animated.View>
-            {/* Label strip */}
             <LinearGradient
               colors={['transparent', 'rgba(6,2,17,0.95)']}
               style={styles.boxLabelGrad}
@@ -97,39 +59,21 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, metri
           </LinearGradient>
         </View>
 
-        {/* Product Info */}
+        {/* Product info */}
         <View style={styles.info}>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>Play Booster Box</Text>
           </View>
-
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.sub}>{subtitle}</Text>
           <Text style={styles.release}>{releaseDate}</Text>
-
-          {/* Mini metrics */}
-          <View style={styles.metricStack}>
-            {metrics.map((m, i) => (
-              <View key={i} style={styles.miniMetric}>
-                <Text style={styles.mmLabel}>{m.label}</Text>
-                {m.isScore && m.score != null ? (
-                  <View style={styles.scoreRow}>
-                    <MiniGauge score={m.score} />
-                    <View style={{ marginLeft: 6 }}>
-                      <Text style={styles.mmValue}>{m.score}</Text>
-                      <Text style={[styles.mmSub, { color: Colors.success }]}>{m.sub}</Text>
-                    </View>
-                  </View>
-                ) : (
-                  <>
-                    <Text style={styles.mmValue}>{m.value}</Text>
-                    <Text style={styles.mmSub}>{m.sub}</Text>
-                  </>
-                )}
-              </View>
-            ))}
-          </View>
         </View>
+      </View>
+
+      {/* Price bar below hero row */}
+      <View style={styles.priceBar}>
+        <Text style={styles.priceValue}>{price}</Text>
+        <Text style={styles.priceChange}>▲ {priceChange}</Text>
       </View>
     </View>
   );
@@ -138,10 +82,9 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, metri
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    position: 'relative',
+    paddingBottom: Spacing.lg,
   },
-  heroRow: { flexDirection: 'row', gap: Spacing.md },
+  heroRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: 14 },
 
   // Box art
   boxArtWrap: { flexShrink: 0, width: 140 },
@@ -171,21 +114,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   badgeText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 1.2, textTransform: 'uppercase' },
-  title: { fontSize: 20, fontWeight: '800', letterSpacing: -0.6, color: Colors.text1, lineHeight: 22, marginBottom: 2 },
-  sub: { fontSize: 13, fontWeight: '500', color: Colors.text2, marginBottom: 2 },
-  release: { fontSize: 11, color: Colors.text3, fontWeight: '500', marginBottom: Spacing.lg },
+  title: { fontSize: 22, fontWeight: '800', letterSpacing: -0.7, color: Colors.text1, lineHeight: 25, marginBottom: 3 },
+  sub: { fontSize: 13, fontWeight: '500', color: Colors.text2, marginBottom: 3 },
+  release: { fontSize: 11, color: Colors.text3, fontWeight: '500' },
 
-  // Metric stack
-  metricStack: { gap: Spacing.sm },
-  miniMetric: {
-    backgroundColor: Colors.surface2,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 8,
+  // Price bar
+  priceBar: { gap: 4 },
+  priceValue: {
+    fontSize: 36, fontWeight: '800', color: Colors.text1,
+    letterSpacing: -1.5, fontVariant: ['tabular-nums'], lineHeight: 38,
   },
-  mmLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.7, textTransform: 'uppercase', color: Colors.text3, marginBottom: 2 },
-  mmValue: { fontSize: 18, fontWeight: '800', letterSpacing: -0.8, color: Colors.text1, fontVariant: ['tabular-nums'], lineHeight: 20 },
-  mmSub: { fontSize: 10, color: Colors.text3, fontWeight: '500', marginTop: 1 },
-  scoreRow: { flexDirection: 'row', alignItems: 'center' },
+  priceChange: { fontSize: 13, fontWeight: '600', color: Colors.success, fontVariant: ['tabular-nums'] },
 });

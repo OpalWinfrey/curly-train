@@ -1,97 +1,69 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Colors, Radius, Spacing } from './tokens';
 
-type Signal = 'BUY' | 'HOLD' | 'WAIT' | 'SKIP';
-
 interface Props {
-  signal: Signal;
-  rationale: string;
-  confidence: number;
+  signal: 'BUY' | 'HOLD' | 'WAIT' | 'SKIP';
+  bullets: string[];
+  confidence: number;  // 1–5
+  confidenceLabel: string;  // "High"
 }
 
-const SIGNAL_CONFIGS: Record<Signal, {
-  label: string;
-  sub: string;
-  active: boolean;
-  border: string;
-  bg: string;
-  textColor: string;
-}> = {
-  BUY:  { label: 'BUY',  sub: 'Strong signal', active: true,  border: 'rgba(139,92,246,0.38)', bg: 'rgba(139,92,246,0.14)', textColor: Colors.accent  },
-  HOLD: { label: 'HOLD', sub: 'Neutral',        active: false, border: Colors.border,            bg: 'rgba(255,255,255,0.03)', textColor: Colors.text2  },
-  WAIT: { label: 'WAIT', sub: 'Watch for dip',  active: false, border: 'rgba(245,158,11,0.18)',  bg: 'rgba(245,158,11,0.07)', textColor: Colors.warning },
-  SKIP: { label: 'SKIP', sub: 'Not advised',    active: false, border: 'rgba(239,68,68,0.12)',   bg: 'rgba(239,68,68,0.05)', textColor: Colors.danger  },
+const SIGNAL_COLOR: Record<string, string> = {
+  BUY: Colors.success,
+  HOLD: Colors.warning,
+  WAIT: Colors.warning,
+  SKIP: Colors.danger,
 };
 
-function SignalButton({ cfg, isActive }: { cfg: typeof SIGNAL_CONFIGS.BUY; isActive: boolean }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const onIn = () => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, damping: 20 }).start();
-  const onOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, damping: 20 }).start();
+export function RecommendationCard({ signal, bullets, confidence, confidenceLabel }: Props) {
+  const signalColor = SIGNAL_COLOR[signal] ?? Colors.success;
 
-  return (
-    <Animated.View style={{ flex: 1, transform: [{ scale }] }}>
-      <Pressable onPressIn={onIn} onPressOut={onOut}>
-        <View style={[styles.sigBtn, { borderColor: cfg.border, backgroundColor: cfg.bg }]}>
-          {isActive && (
-            <LinearGradient
-              colors={['rgba(139,92,246,0.12)', 'transparent']}
-              start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-          )}
-          <Text style={[styles.sigLabel, { color: cfg.textColor, opacity: isActive ? 1 : cfg.textColor === Colors.danger ? 0.55 : 1 }]}>
-            {cfg.label}
-          </Text>
-          <Text style={[styles.sigSub, { color: cfg.textColor, opacity: isActive ? 0.7 : 0.4 }]}>
-            {cfg.sub}
-          </Text>
-        </View>
-      </Pressable>
-    </Animated.View>
-  );
-}
-
-export function RecommendationCard({ signal, rationale, confidence }: Props) {
-  const ORDER: Signal[] = ['BUY', 'HOLD', 'WAIT', 'SKIP'];
+  // Bar heights increase from left to right (signal-strength style)
+  const BAR_HEIGHTS = [10, 14, 18, 22, 26];
 
   return (
     <View style={styles.card}>
-      <LinearGradient
-        colors={['rgba(139,92,246,0.05)', 'transparent']}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
+      <View style={styles.inner}>
 
-      <View style={styles.grid}>
-        <View style={styles.gridRow}>
-          {ORDER.slice(0, 2).map(s => (
-            <SignalButton key={s} cfg={SIGNAL_CONFIGS[s]} isActive={s === signal} />
+        {/* Left: signal + icon */}
+        <View style={styles.signalZone}>
+          <Text style={[styles.signalText, { color: signalColor }]}>{signal}</Text>
+          <View style={[styles.shieldWrap, { backgroundColor: `${signalColor}1A` }]}>
+            <Text style={[styles.shieldIcon, { color: signalColor }]}>✓</Text>
+          </View>
+        </View>
+
+        {/* Middle: bullet reasons */}
+        <View style={styles.bulletZone}>
+          {bullets.map((b, i) => (
+            <View key={i} style={styles.bulletRow}>
+              <Text style={[styles.check, { color: signalColor }]}>✓</Text>
+              <Text style={styles.bulletText}>{b}</Text>
+            </View>
           ))}
         </View>
-        <View style={styles.gridRow}>
-          {ORDER.slice(2).map(s => (
-            <SignalButton key={s} cfg={SIGNAL_CONFIGS[s]} isActive={s === signal} />
-          ))}
+
+        {/* Right: confidence */}
+        <View style={styles.confZone}>
+          <Text style={styles.confEyebrow}>CONFIDENCE</Text>
+          <Text style={[styles.confGrade, { color: signalColor }]}>{confidenceLabel}</Text>
+          <View style={styles.confBars}>
+            {BAR_HEIGHTS.map((h, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.confBar,
+                  { height: h },
+                  i < confidence
+                    ? { backgroundColor: signalColor }
+                    : { backgroundColor: 'rgba(255,255,255,0.08)' },
+                ]}
+              />
+            ))}
+          </View>
         </View>
-      </View>
 
-      <View style={styles.rationale}>
-        <Text style={styles.rationaleText}>{rationale}</Text>
-      </View>
-
-      <View style={styles.confRow}>
-        <Text style={styles.confLabel}>Model Confidence</Text>
-        <Text style={styles.confVal}>{confidence}%</Text>
-      </View>
-      <View style={styles.confTrack}>
-        <LinearGradient
-          colors={[Colors.accent2, Colors.accent]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={[styles.confFill, { width: `${confidence}%` }]}
-        />
       </View>
     </View>
   );
@@ -106,31 +78,31 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     overflow: 'hidden',
   },
-  grid: { gap: 8, marginBottom: Spacing.lg },
-  gridRow: { flexDirection: 'row', gap: 8 },
-  sigBtn: {
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    gap: 3,
-    overflow: 'hidden',
+  inner: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+
+  // Signal
+  signalZone: { alignItems: 'center', width: 60, flexShrink: 0 },
+  signalText: { fontSize: 34, fontWeight: '900', letterSpacing: -0.5, lineHeight: 36 },
+  shieldWrap: {
+    width: 38, height: 38, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 8,
   },
-  sigLabel: { fontSize: 15, fontWeight: '900', letterSpacing: 0.3 },
-  sigSub: { fontSize: 10, fontWeight: '500' },
-  rationale: {
-    backgroundColor: 'rgba(255,255,255,0.025)',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: Spacing.md,
+  shieldIcon: { fontSize: 20, fontWeight: '700' },
+
+  // Bullets
+  bulletZone: { flex: 1, gap: 7 },
+  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
+  check: { fontSize: 12, fontWeight: '700', lineHeight: 17 },
+  bulletText: { flex: 1, fontSize: 11.5, fontWeight: '500', color: Colors.text2, lineHeight: 16 },
+
+  // Confidence
+  confZone: { alignItems: 'center', width: 60, flexShrink: 0 },
+  confEyebrow: {
+    fontSize: 8, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase',
+    color: Colors.text3, marginBottom: 3,
   },
-  rationaleText: { fontSize: 13, lineHeight: 20, color: Colors.text2 },
-  confRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  confLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, color: Colors.text3 },
-  confVal: { fontSize: 13, fontWeight: '700', color: Colors.accent, fontVariant: ['tabular-nums'] },
-  confTrack: { height: 3, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' },
-  confFill: { height: '100%', borderRadius: 2 },
+  confGrade: { fontSize: 16, fontWeight: '800', letterSpacing: -0.3, marginBottom: 8 },
+  confBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 3 },
+  confBar: { width: 7, borderRadius: 2 },
 });
