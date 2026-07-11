@@ -21,6 +21,11 @@
       },
       "package": "com.vaultmark.app"
     },
+    "platforms": ["ios", "android", "web"],
+    "web": {
+      "bundler": "metro",
+      "output": "single-page-app"
+    },
     "plugins": [
       "expo-router"
     ]

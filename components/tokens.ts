@@ -47,7 +47,7 @@ export const Typography = {
   body: { fontSize: 13, fontWeight: '400' as const, lineHeight: 20 },
   caption: { fontSize: 11, fontWeight: '500' as const },
   label: { fontSize: 10, fontWeight: '700' as const, letterSpacing: 0.8, textTransform: 'uppercase' as const },
-  numeric: { fontVariant: ['tabular-nums'] as const[] },
+  numeric: { fontVariant: ['tabular-nums' as const] },
 } as const;
 
 // Donut / chart segment colors
