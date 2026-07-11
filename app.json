@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "VaultMark",
+    "slug": "vaultmark",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "vaultmark",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#090B10",
+    "splash": {
+      "backgroundColor": "#090B10"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.vaultmark.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#090B10"
+      },
+      "package": "com.vaultmark.app"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
