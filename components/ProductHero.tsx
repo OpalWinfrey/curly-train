@@ -3,17 +3,24 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radius, Spacing } from './tokens';
 
+interface MetricItem {
+  label: string;
+  value: string;
+  sub: string;
+  isScore?: boolean;
+  score?: number;
+}
+
 interface Props {
   setCode: string;
   year: string;
   title: string;
   subtitle: string;
   releaseDate: string;
-  price: string;
-  priceChange: string;
+  metrics: MetricItem[];
 }
 
-export function ProductHero({ setCode, year, title, subtitle, releaseDate, price, priceChange }: Props) {
+export function ProductHero({ setCode, year, title, subtitle, releaseDate, metrics }: Props) {
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -26,6 +33,8 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, price
   }, []);
 
   const shimmerOpacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] });
+
+  const titleLines = title.split('\n');
 
   return (
     <View style={styles.container}>
@@ -52,9 +61,16 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, price
             >
               <Text style={styles.boxMagic}>MAGIC</Text>
               <Text style={styles.boxGathering}>THE GATHERING</Text>
-              <Text style={styles.boxSetName}>TARKIR</Text>
-              <Text style={styles.boxSetSub}>DRAGONSTORM</Text>
-              <Text style={styles.boxFormatLabel}>PLAY BOOSTERS</Text>
+              {titleLines.map((line, i) => (
+                <Text
+                  key={i}
+                  style={i === 0 ? styles.boxSetName : styles.boxSetSub}
+                  numberOfLines={1}
+                >
+                  {line.replace(':', '').trim().toUpperCase()}
+                </Text>
+              ))}
+              <Text style={styles.boxFormatLabel}>{setCode} · {year}</Text>
             </LinearGradient>
           </LinearGradient>
         </View>
@@ -62,18 +78,29 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, price
         {/* Product info */}
         <View style={styles.info}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>Play Booster Box</Text>
+            <Text style={styles.badgeText}>{subtitle}</Text>
           </View>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.sub}>{subtitle}</Text>
           <Text style={styles.release}>{releaseDate}</Text>
-        </View>
-      </View>
 
-      {/* Price bar below hero row */}
-      <View style={styles.priceBar}>
-        <Text style={styles.priceValue}>{price}</Text>
-        <Text style={styles.priceChange}>▲ {priceChange}</Text>
+          {/* Metrics */}
+          <View style={styles.metricsCol}>
+            {metrics.map((m) => (
+              <View key={m.label} style={styles.metricItem}>
+                <Text style={styles.metricLabel}>{m.label}</Text>
+                <Text style={[
+                  styles.metricValue,
+                  m.isScore && m.score !== undefined
+                    ? { color: m.score >= 80 ? Colors.success : m.score >= 65 ? Colors.accent : Colors.warning }
+                    : {}
+                ]}>
+                  {m.value}
+                </Text>
+                {m.sub ? <Text style={styles.metricSub}>{m.sub}</Text> : null}
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -84,12 +111,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.lg,
   },
-  heroRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: 14 },
+  heroRow: { flexDirection: 'row', gap: Spacing.md },
 
   // Box art
-  boxArtWrap: { flexShrink: 0, width: 140 },
+  boxArtWrap: { flexShrink: 0, width: 130 },
   boxArt: {
-    width: 140, height: 188,
+    width: 130, height: 200,
     borderRadius: Radius.md,
     overflow: 'hidden',
     borderWidth: 1,
@@ -99,9 +126,9 @@ const styles = StyleSheet.create({
   boxLabelGrad: { padding: Spacing.sm, paddingTop: Spacing.xxl },
   boxMagic: { fontSize: 8, fontWeight: '800', color: 'rgba(255,255,255,0.85)', textAlign: 'center', letterSpacing: 1 },
   boxGathering: { fontSize: 5, fontWeight: '500', color: 'rgba(255,255,255,0.35)', textAlign: 'center', letterSpacing: 0.5, marginBottom: 4 },
-  boxSetName: { fontSize: 13, fontWeight: '900', color: 'rgba(255,255,255,0.92)', textAlign: 'center', letterSpacing: 1 },
-  boxSetSub: { fontSize: 8, fontWeight: '700', color: 'rgba(200,160,240,0.85)', textAlign: 'center', letterSpacing: 0.5 },
-  boxFormatLabel: { fontSize: 6, fontWeight: '500', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 2, letterSpacing: 0.5 },
+  boxSetName: { fontSize: 12, fontWeight: '900', color: 'rgba(255,255,255,0.92)', textAlign: 'center', letterSpacing: 0.5 },
+  boxSetSub: { fontSize: 8, fontWeight: '700', color: 'rgba(200,160,240,0.85)', textAlign: 'center', letterSpacing: 0.3 },
+  boxFormatLabel: { fontSize: 6, fontWeight: '500', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 3, letterSpacing: 0.5 },
 
   // Info
   info: { flex: 1, paddingTop: 2 },
@@ -114,15 +141,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   badgeText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 1.2, textTransform: 'uppercase' },
-  title: { fontSize: 22, fontWeight: '800', letterSpacing: -0.7, color: Colors.text1, lineHeight: 25, marginBottom: 3 },
-  sub: { fontSize: 13, fontWeight: '500', color: Colors.text2, marginBottom: 3 },
-  release: { fontSize: 11, color: Colors.text3, fontWeight: '500' },
+  title: { fontSize: 18, fontWeight: '800', letterSpacing: -0.5, color: Colors.text1, lineHeight: 22, marginBottom: 4 },
+  release: { fontSize: 11, color: Colors.text3, fontWeight: '500', marginBottom: Spacing.md },
 
-  // Price bar
-  priceBar: { gap: 4 },
-  priceValue: {
-    fontSize: 36, fontWeight: '800', color: Colors.text1,
-    letterSpacing: -1.5, fontVariant: ['tabular-nums'], lineHeight: 38,
-  },
-  priceChange: { fontSize: 13, fontWeight: '600', color: Colors.success, fontVariant: ['tabular-nums'] },
+  metricsCol: { gap: 10 },
+  metricItem: { gap: 1 },
+  metricLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', color: Colors.text3 },
+  metricValue: { fontSize: 16, fontWeight: '800', color: Colors.text1, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
+  metricSub: { fontSize: 10, color: Colors.text3, fontWeight: '500' },
 });
