@@ -1,0 +1,103 @@
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import type { CollectionItem, WatchlistItem } from './types';
+
+interface UserState {
+  collection: CollectionItem[];
+  watchlist: WatchlistItem[];
+  recentlyViewed: string[];
+  addToCollection: (item: Omit<CollectionItem, 'id'>) => void;
+  updateCollectionItem: (id: string, updates: Partial<CollectionItem>) => void;
+  removeFromCollection: (id: string) => void;
+  addToWatchlist: (item: Omit<WatchlistItem, 'id'>) => void;
+  updateWatchlistItem: (id: string, updates: Partial<WatchlistItem>) => void;
+  removeFromWatchlist: (id: string) => void;
+  moveWatchlistToCollection: (watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string) => void;
+  addRecentlyViewed: (productId: string) => void;
+  isInCollection: (productId: string) => boolean;
+  isInWatchlist: (productId: string) => boolean;
+  getCollectionItem: (productId: string) => CollectionItem | undefined;
+  getWatchlistItem: (productId: string) => WatchlistItem | undefined;
+}
+
+const UserStateContext = createContext<UserState | null>(null);
+
+let idCounter = 1;
+function genId() { return `item-${idCounter++}`; }
+
+export function UserStateProvider({ children }: { children: React.ReactNode }) {
+  const [collection, setCollection] = useState<CollectionItem[]>([]);
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
+
+  const addToCollection = useCallback((item: Omit<CollectionItem, 'id'>) => {
+    setCollection(prev => {
+      const existing = prev.find(c => c.productId === item.productId);
+      if (existing) {
+        return prev.map(c => c.productId === item.productId
+          ? { ...c, quantity: c.quantity + item.quantity, purchasePrice: item.purchasePrice, notes: item.notes ?? c.notes }
+          : c);
+      }
+      return [...prev, { ...item, id: genId() }];
+    });
+  }, []);
+
+  const updateCollectionItem = useCallback((id: string, updates: Partial<CollectionItem>) => {
+    setCollection(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  }, []);
+
+  const removeFromCollection = useCallback((id: string) => {
+    setCollection(prev => prev.filter(c => c.id !== id));
+  }, []);
+
+  const addToWatchlist = useCallback((item: Omit<WatchlistItem, 'id'>) => {
+    setWatchlist(prev => {
+      if (prev.find(w => w.productId === item.productId)) return prev;
+      return [...prev, { ...item, id: genId() }];
+    });
+  }, []);
+
+  const updateWatchlistItem = useCallback((id: string, updates: Partial<WatchlistItem>) => {
+    setWatchlist(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w));
+  }, []);
+
+  const removeFromWatchlist = useCallback((id: string) => {
+    setWatchlist(prev => prev.filter(w => w.id !== id));
+  }, []);
+
+  const moveWatchlistToCollection = useCallback((watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string) => {
+    const wItem = watchlist.find(w => w.id === watchlistId);
+    if (!wItem) return;
+    addToCollection({ productId: wItem.productId, quantity, purchasePrice, purchaseDate, notes, condition: 'NM' });
+    setWatchlist(prev => prev.filter(w => w.id !== watchlistId));
+  }, [watchlist, addToCollection]);
+
+  const addRecentlyViewed = useCallback((productId: string) => {
+    setRecentlyViewed(prev => {
+      const filtered = prev.filter(id => id !== productId);
+      return [productId, ...filtered].slice(0, 5);
+    });
+  }, []);
+
+  const isInCollection = useCallback((productId: string) => collection.some(c => c.productId === productId), [collection]);
+  const isInWatchlist = useCallback((productId: string) => watchlist.some(w => w.productId === productId), [watchlist]);
+  const getCollectionItem = useCallback((productId: string) => collection.find(c => c.productId === productId), [collection]);
+  const getWatchlistItem = useCallback((productId: string) => watchlist.find(w => w.productId === productId), [watchlist]);
+
+  return (
+    <UserStateContext.Provider value={{
+      collection, watchlist, recentlyViewed,
+      addToCollection, updateCollectionItem, removeFromCollection,
+      addToWatchlist, updateWatchlistItem, removeFromWatchlist,
+      moveWatchlistToCollection, addRecentlyViewed,
+      isInCollection, isInWatchlist, getCollectionItem, getWatchlistItem,
+    }}>
+      {children}
+    </UserStateContext.Provider>
+  );
+}
+
+export function useUserState(): UserState {
+  const ctx = useContext(UserStateContext);
+  if (!ctx) throw new Error('useUserState must be used within UserStateProvider');
+  return ctx;
+}
