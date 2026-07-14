@@ -1,7 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SvgUri } from 'react-native-svg';
 import { Colors, Radius, Spacing } from './tokens';
+import { scryfallSetIcon } from '../data/scryfall';
 
 interface MetricItem {
   label: string;
@@ -18,22 +20,21 @@ interface Props {
   subtitle: string;
   releaseDate: string;
   metrics: MetricItem[];
+  heroImageUrl?: string;
 }
 
-export function ProductHero({ setCode, year, title, subtitle, releaseDate, metrics }: Props) {
-  const shimmer = useRef(new Animated.Value(0)).current;
+function SetIconOverlay({ setCode }: { setCode: string }) {
+  const [error, setError] = useState(false);
+  if (error) return null;
+  return (
+    <View style={styles.setIconWrap}>
+      <SvgUri width={28} height={28} uri={scryfallSetIcon(setCode)} onError={() => setError(true)} />
+    </View>
+  );
+}
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmer, { toValue: 1, duration: 4000, useNativeDriver: true }),
-        Animated.timing(shimmer, { toValue: 0, duration: 4000, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
-  const shimmerOpacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] });
-
+export function ProductHero({ setCode, year, title, subtitle, releaseDate, metrics, heroImageUrl }: Props) {
+  const [imgError, setImgError] = useState(false);
   const titleLines = title.split('\n');
 
   return (
@@ -47,20 +48,22 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, metri
             end={{ x: 0.7, y: 1 }}
             style={styles.boxArt}
           >
-            <Animated.View style={[StyleSheet.absoluteFill, { opacity: shimmerOpacity }]}>
-              <LinearGradient
-                colors={['rgba(139,92,246,0.4)', 'transparent', 'rgba(251,146,60,0.2)']}
-                start={{ x: 0.7, y: 0.2 }}
-                end={{ x: 0.3, y: 0.9 }}
-                style={StyleSheet.absoluteFill}
+            {/* Card art background */}
+            {heroImageUrl && !imgError && (
+              <Image
+                source={{ uri: heroImageUrl }}
+                style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}
+                resizeMode="cover"
+                onError={() => setImgError(true)}
               />
-            </Animated.View>
+            )}
+
+            {/* Gradient vignette over the art */}
             <LinearGradient
-              colors={['transparent', 'rgba(6,2,17,0.95)']}
+              colors={['transparent', 'rgba(6,2,17,0.9)']}
               style={styles.boxLabelGrad}
             >
-              <Text style={styles.boxMagic}>MAGIC</Text>
-              <Text style={styles.boxGathering}>THE GATHERING</Text>
+              <SetIconOverlay setCode={setCode} />
               {titleLines.map((line, i) => (
                 <Text
                   key={i}
@@ -113,7 +116,6 @@ const styles = StyleSheet.create({
   },
   heroRow: { flexDirection: 'row', gap: Spacing.md },
 
-  // Box art
   boxArtWrap: { flexShrink: 0, width: 130 },
   boxArt: {
     width: 130, height: 200,
@@ -123,14 +125,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.07)',
     justifyContent: 'flex-end',
   },
-  boxLabelGrad: { padding: Spacing.sm, paddingTop: Spacing.xxl },
-  boxMagic: { fontSize: 8, fontWeight: '800', color: 'rgba(255,255,255,0.85)', textAlign: 'center', letterSpacing: 1 },
-  boxGathering: { fontSize: 5, fontWeight: '500', color: 'rgba(255,255,255,0.35)', textAlign: 'center', letterSpacing: 0.5, marginBottom: 4 },
-  boxSetName: { fontSize: 12, fontWeight: '900', color: 'rgba(255,255,255,0.92)', textAlign: 'center', letterSpacing: 0.5 },
-  boxSetSub: { fontSize: 8, fontWeight: '700', color: 'rgba(200,160,240,0.85)', textAlign: 'center', letterSpacing: 0.3 },
-  boxFormatLabel: { fontSize: 6, fontWeight: '500', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 3, letterSpacing: 0.5 },
+  boxLabelGrad: { padding: Spacing.sm, paddingTop: Spacing.xxl, gap: 2 },
+  setIconWrap: { marginBottom: 4, opacity: 0.9 },
+  boxSetName: { fontSize: 12, fontWeight: '900', color: 'rgba(255,255,255,0.92)', letterSpacing: 0.5 },
+  boxSetSub: { fontSize: 8, fontWeight: '700', color: 'rgba(200,160,240,0.85)', letterSpacing: 0.3 },
+  boxFormatLabel: { fontSize: 6, fontWeight: '500', color: 'rgba(255,255,255,0.4)', marginTop: 2, letterSpacing: 0.5 },
 
-  // Info
   info: { flex: 1, paddingTop: 2 },
   badge: {
     alignSelf: 'flex-start',

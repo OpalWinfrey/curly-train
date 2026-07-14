@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SvgUri } from 'react-native-svg';
 import { Colors, Radius, Spacing } from './tokens';
 import type { Product } from '../data/types';
+import { scryfallSetIcon } from '../data/scryfall';
 
 const TYPE_LABELS: Record<string, string> = {
   'play-booster-box':      'Play Booster Box',
@@ -33,16 +35,30 @@ interface Props {
   compact?: boolean;
 }
 
+function SetIcon({ setCode, size }: { setCode: string; size: number }) {
+  const [error, setError] = useState(false);
+  if (error) return null;
+  return (
+    <SvgUri
+      width={size}
+      height={size}
+      uri={scryfallSetIcon(setCode)}
+      onError={() => setError(true)}
+    />
+  );
+}
+
 export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOwned, compact }: Props) {
   const gradColors = TYPE_COLORS[product.productType] ?? ['#1a1a3a', '#060610'];
   const priceChange = product.priceChangePct;
   const changePositive = priceChange >= 0;
+  const iconSize = compact ? 32 : 40;
 
   return (
     <Pressable onPress={onPress} style={[styles.card, compact && styles.compact]}>
-      {/* Art thumbnail */}
+      {/* Art thumbnail with set icon */}
       <LinearGradient colors={gradColors} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={[styles.thumb, compact && styles.thumbCompact]}>
-        <Text style={styles.setCode}>{product.setCode}</Text>
+        <SetIcon setCode={product.setCode} size={iconSize} />
         {isOwned && <View style={styles.ownedDot} />}
       </LinearGradient>
 
@@ -99,7 +115,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   thumbCompact: { width: 56, height: 64 },
-  setCode: { fontSize: 11, fontWeight: '900', color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5, textAlign: 'center' },
   ownedDot: {
     position: 'absolute',
     top: 6, right: 6,
