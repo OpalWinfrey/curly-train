@@ -51,8 +51,8 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
         const listings = await fetchSealedPrices();
         const priced = buildProductCatalog(listings, scryfallSets);
         for (const p of priced) priceMap.set(p.id, p.currentMarketPrice);
-      } catch {
-        // Manapool unavailable — prices stay 0 for Scryfall-only products
+      } catch (err) {
+        console.warn('[VaultMark] Manapool price fetch failed, products will show Price N/A:', err);
       }
 
       // Static PRODUCTS carry rich metadata (EV, recommendations). Prefer them
@@ -66,7 +66,8 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
         });
 
       setProducts([...PRODUCTS, ...extra]);
-    } catch {
+    } catch (err) {
+      console.warn('[VaultMark] Scryfall fetch failed, using static catalog:', err);
       // keep static PRODUCTS fallback
     } finally {
       setProductsLoading(false);
