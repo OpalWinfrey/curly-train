@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radius, Spacing } from './tokens';
 import type { Product } from '../data/types';
-import { scryfallCardArt } from '../data/scryfall';
+import { useProductArt } from '../data/scryfall';
 
 const TYPE_LABELS: Record<string, string> = {
   'play-booster-box':      'Play Booster Box',
@@ -41,7 +41,7 @@ export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOw
   const changePositive = priceChange >= 0;
   const [artError, setArtError] = useState(false);
   const firstHit = product.playBoosterHits?.[0] ?? product.collectorBoosterHits?.[0];
-  const artUrl = firstHit ? scryfallCardArt(firstHit.name) : null;
+  const artUrl = useProductArt(product.setCode, firstHit?.name);
 
   return (
     <Pressable onPress={onPress} style={[styles.card, compact && styles.compact]}>
