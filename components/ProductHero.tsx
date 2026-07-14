@@ -1,7 +1,16 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radius, Spacing } from './tokens';
+import { scryfallSetIcon } from '../data/scryfall';
+
+interface MetricItem {
+  label: string;
+  value: string;
+  sub: string;
+  isScore?: boolean;
+  score?: number;
+}
 
 interface Props {
   setCode: string;
@@ -9,23 +18,27 @@ interface Props {
   title: string;
   subtitle: string;
   releaseDate: string;
-  price: string;
-  priceChange: string;
+  metrics: MetricItem[];
+  heroImageUrl?: string;
 }
 
-export function ProductHero({ setCode, year, title, subtitle, releaseDate, price, priceChange }: Props) {
-  const shimmer = useRef(new Animated.Value(0)).current;
+function SetIconOverlay({ setCode }: { setCode: string }) {
+  const [error, setError] = useState(false);
+  if (error) return null;
+  return (
+    <View style={styles.setIconWrap}>
+      <Image
+        source={{ uri: scryfallSetIcon(setCode) }}
+        style={{ width: 28, height: 28 }}
+        onError={() => setError(true)}
+      />
+    </View>
+  );
+}
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmer, { toValue: 1, duration: 4000, useNativeDriver: true }),
-        Animated.timing(shimmer, { toValue: 0, duration: 4000, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
-  const shimmerOpacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] });
+export function ProductHero({ setCode, year, title, subtitle, releaseDate, metrics, heroImageUrl }: Props) {
+  const [imgError, setImgError] = useState(false);
+  const titleLines = title.split('\n');
 
   return (
     <View style={styles.container}>
@@ -38,23 +51,32 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, price
             end={{ x: 0.7, y: 1 }}
             style={styles.boxArt}
           >
-            <Animated.View style={[StyleSheet.absoluteFill, { opacity: shimmerOpacity }]}>
-              <LinearGradient
-                colors={['rgba(139,92,246,0.4)', 'transparent', 'rgba(251,146,60,0.2)']}
-                start={{ x: 0.7, y: 0.2 }}
-                end={{ x: 0.3, y: 0.9 }}
-                style={StyleSheet.absoluteFill}
+            {/* Card art background */}
+            {heroImageUrl && !imgError && (
+              <Image
+                source={{ uri: heroImageUrl }}
+                style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}
+                resizeMode="cover"
+                onError={() => setImgError(true)}
               />
-            </Animated.View>
+            )}
+
+            {/* Gradient vignette over the art */}
             <LinearGradient
-              colors={['transparent', 'rgba(6,2,17,0.95)']}
+              colors={['transparent', 'rgba(6,2,17,0.9)']}
               style={styles.boxLabelGrad}
             >
-              <Text style={styles.boxMagic}>MAGIC</Text>
-              <Text style={styles.boxGathering}>THE GATHERING</Text>
-              <Text style={styles.boxSetName}>TARKIR</Text>
-              <Text style={styles.boxSetSub}>DRAGONSTORM</Text>
-              <Text style={styles.boxFormatLabel}>PLAY BOOSTERS</Text>
+              <SetIconOverlay setCode={setCode} />
+              {titleLines.map((line, i) => (
+                <Text
+                  key={i}
+                  style={i === 0 ? styles.boxSetName : styles.boxSetSub}
+                  numberOfLines={1}
+                >
+                  {line.replace(':', '').trim().toUpperCase()}
+                </Text>
+              ))}
+              <Text style={styles.boxFormatLabel}>{setCode} · {year}</Text>
             </LinearGradient>
           </LinearGradient>
         </View>
@@ -62,18 +84,29 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, price
         {/* Product info */}
         <View style={styles.info}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>Play Booster Box</Text>
+            <Text style={styles.badgeText}>{subtitle}</Text>
           </View>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.sub}>{subtitle}</Text>
           <Text style={styles.release}>{releaseDate}</Text>
-        </View>
-      </View>
 
-      {/* Price bar below hero row */}
-      <View style={styles.priceBar}>
-        <Text style={styles.priceValue}>{price}</Text>
-        <Text style={styles.priceChange}>▲ {priceChange}</Text>
+          {/* Metrics */}
+          <View style={styles.metricsCol}>
+            {metrics.map((m) => (
+              <View key={m.label} style={styles.metricItem}>
+                <Text style={styles.metricLabel}>{m.label}</Text>
+                <Text style={[
+                  styles.metricValue,
+                  m.isScore && m.score !== undefined
+                    ? { color: m.score >= 80 ? Colors.success : m.score >= 65 ? Colors.accent : Colors.warning }
+                    : {}
+                ]}>
+                  {m.value}
+                </Text>
+                {m.sub ? <Text style={styles.metricSub}>{m.sub}</Text> : null}
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -84,26 +117,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.lg,
   },
-  heroRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: 14 },
+  heroRow: { flexDirection: 'row', gap: Spacing.md },
 
-  // Box art
-  boxArtWrap: { flexShrink: 0, width: 140 },
+  boxArtWrap: { flexShrink: 0, width: 130 },
   boxArt: {
-    width: 140, height: 188,
+    width: 130, height: 200,
     borderRadius: Radius.md,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.07)',
     justifyContent: 'flex-end',
   },
-  boxLabelGrad: { padding: Spacing.sm, paddingTop: Spacing.xxl },
-  boxMagic: { fontSize: 8, fontWeight: '800', color: 'rgba(255,255,255,0.85)', textAlign: 'center', letterSpacing: 1 },
-  boxGathering: { fontSize: 5, fontWeight: '500', color: 'rgba(255,255,255,0.35)', textAlign: 'center', letterSpacing: 0.5, marginBottom: 4 },
-  boxSetName: { fontSize: 13, fontWeight: '900', color: 'rgba(255,255,255,0.92)', textAlign: 'center', letterSpacing: 1 },
-  boxSetSub: { fontSize: 8, fontWeight: '700', color: 'rgba(200,160,240,0.85)', textAlign: 'center', letterSpacing: 0.5 },
-  boxFormatLabel: { fontSize: 6, fontWeight: '500', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 2, letterSpacing: 0.5 },
+  boxLabelGrad: { padding: Spacing.sm, paddingTop: Spacing.xxl, gap: 2 },
+  setIconWrap: { marginBottom: 4, opacity: 0.9 },
+  boxSetName: { fontSize: 12, fontWeight: '900', color: 'rgba(255,255,255,0.92)', letterSpacing: 0.5 },
+  boxSetSub: { fontSize: 8, fontWeight: '700', color: 'rgba(200,160,240,0.85)', letterSpacing: 0.3 },
+  boxFormatLabel: { fontSize: 6, fontWeight: '500', color: 'rgba(255,255,255,0.4)', marginTop: 2, letterSpacing: 0.5 },
 
-  // Info
   info: { flex: 1, paddingTop: 2 },
   badge: {
     alignSelf: 'flex-start',
@@ -114,15 +144,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   badgeText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 1.2, textTransform: 'uppercase' },
-  title: { fontSize: 22, fontWeight: '800', letterSpacing: -0.7, color: Colors.text1, lineHeight: 25, marginBottom: 3 },
-  sub: { fontSize: 13, fontWeight: '500', color: Colors.text2, marginBottom: 3 },
-  release: { fontSize: 11, color: Colors.text3, fontWeight: '500' },
+  title: { fontSize: 18, fontWeight: '800', letterSpacing: -0.5, color: Colors.text1, lineHeight: 22, marginBottom: 4 },
+  release: { fontSize: 11, color: Colors.text3, fontWeight: '500', marginBottom: Spacing.md },
 
-  // Price bar
-  priceBar: { gap: 4 },
-  priceValue: {
-    fontSize: 36, fontWeight: '800', color: Colors.text1,
-    letterSpacing: -1.5, fontVariant: ['tabular-nums'], lineHeight: 38,
-  },
-  priceChange: { fontSize: 13, fontWeight: '600', color: Colors.success, fontVariant: ['tabular-nums'] },
+  metricsCol: { gap: 10 },
+  metricItem: { gap: 1 },
+  metricLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', color: Colors.text3 },
+  metricValue: { fontSize: 16, fontWeight: '800', color: Colors.text1, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
+  metricSub: { fontSize: 10, color: Colors.text3, fontWeight: '500' },
 });

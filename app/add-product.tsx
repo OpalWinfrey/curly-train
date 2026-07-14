@@ -9,7 +9,6 @@ import { useRouter } from 'expo-router';
 
 import { SearchBar } from '../components/SearchBar';
 import { Colors, Spacing, Radius } from '../components/tokens';
-import { PRODUCTS } from '../data/products';
 import { useUserState } from '../data/userState';
 import type { Product, Condition } from '../data/types';
 
@@ -19,7 +18,7 @@ const CONDITIONS: Condition[] = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 
 export default function AddProductScreen() {
   const router = useRouter();
-  const { addToCollection, addToWatchlist } = useUserState();
+  const { products, addToCollection, addToWatchlist } = useUserState();
 
   const [step, setStep] = useState<Step>('search');
   const [query, setQuery] = useState('');
@@ -38,11 +37,11 @@ export default function AddProductScreen() {
   const [watchNotes, setWatchNotes] = useState('');
 
   const searchResults = query.trim()
-    ? PRODUCTS.filter(p =>
+    ? products.filter(p =>
         p.name.toLowerCase().includes(query.toLowerCase()) ||
         p.setName.toLowerCase().includes(query.toLowerCase())
       )
-    : PRODUCTS.slice(0, 6);
+    : products.slice(0, 6);
 
   function handleSelectProduct(product: Product) {
     setSelectedProduct(product);
@@ -244,7 +243,7 @@ export default function AddProductScreen() {
                 <Text style={styles.currSign}>$</Text>
                 <TextInput style={styles.textInput} value={targetPrice} onChangeText={setTargetPrice} keyboardType="decimal-pad" autoFocus selectTextOnFocus />
               </View>
-              {parseFloat(targetPrice) > 0 && (
+              {parseFloat(targetPrice) > 0 && selectedProduct.currentMarketPrice > 0 && (
                 <Text style={[styles.targetHint, parseFloat(targetPrice) <= selectedProduct.currentMarketPrice ? styles.hintGood : styles.hintBad]}>
                   {parseFloat(targetPrice) <= selectedProduct.currentMarketPrice
                     ? `${(((selectedProduct.currentMarketPrice - parseFloat(targetPrice)) / selectedProduct.currentMarketPrice) * 100).toFixed(1)}% below current price`
@@ -286,7 +285,7 @@ export default function AddProductScreen() {
                   <ConfirmRow label="Condition" value={condition} />
                   {notes ? <ConfirmRow label="Notes" value={notes} /> : null}
                   <View style={styles.divider} />
-                  <ConfirmRow label="Total Invested" value={`$${(parseFloat(purchasePrice || '0') * parseInt(quantity || '1')).toFixed(2)}`} highlight />
+                  <ConfirmRow label="Total Invested" value={`$${((parseFloat(purchasePrice) || 0) * (Math.max(1, parseInt(quantity) || 1))).toFixed(2)}`} highlight />
                 </>
               ) : (
                 <>

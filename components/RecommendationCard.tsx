@@ -5,7 +5,7 @@ import { Colors, Radius, Spacing } from './tokens';
 interface Props {
   signal: 'BUY' | 'HOLD' | 'WAIT' | 'SKIP';
   rationale: string;
-  confidence: number;  // 0–100
+  confidence: number;  // 0–100 percentage
 }
 
 const SIGNAL_COLOR: Record<string, string> = {
@@ -17,10 +17,9 @@ const SIGNAL_COLOR: Record<string, string> = {
 
 export function RecommendationCard({ signal, rationale, confidence }: Props) {
   const signalColor = SIGNAL_COLOR[signal] ?? Colors.success;
-  const bullets = rationale ? rationale.split('. ').map(s => s.replace(/\.$/, '')).filter(Boolean) : ['No rationale available'];
+  const bullets = rationale.split(/\.\s+/).filter(Boolean).map(s => s.replace(/\.$/, ''));
   const confidenceBars = Math.max(1, Math.min(5, Math.round(confidence / 20)));
-  const confidenceLabel = confidence >= 80 ? 'High' : confidence >= 60 ? 'Med' : 'Low';
-
+  const confidenceLabel = confidence >= 75 ? 'High' : confidence >= 50 ? 'Med' : 'Low';
   const BAR_HEIGHTS = [10, 14, 18, 22, 26];
 
   return (

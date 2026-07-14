@@ -16,6 +16,7 @@ import { AddToCollectionModal } from '../AddToCollectionModal';
 import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
 import { useUserState } from '../../data/userState';
+import { useProductArt } from '../../data/scryfall';
 import type { Product, Condition } from '../../data/types';
 
 const TABS = ['Overview', 'Collector Hits', 'EV Breakdown', 'Price History'] as const;
@@ -53,6 +54,7 @@ export function CollectorBoosterDetail({ product }: Props) {
 
   const setLines = product.setName.split(':');
   const title = setLines.length > 1 ? `${setLines[0]}:\n${setLines[1].trim()}` : product.setName;
+  const heroImageUrl = useProductArt(product.setCode, product.collectorBoosterHits?.[0]?.name) ?? undefined;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -83,6 +85,7 @@ export function CollectorBoosterDetail({ product }: Props) {
           title={title}
           subtitle="Collector Booster Box"
           releaseDate={`Released ${new Date(product.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+          heroImageUrl={heroImageUrl}
           metrics={[
             { label: 'Market Price', value: `$${product.currentMarketPrice.toFixed(2)}`, sub: `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` },
             { label: 'Expected EV', value: `$${(product.expectedValue ?? 0).toFixed(2)}`, sub: `${(((product.expectedValue ?? 0) / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
@@ -151,10 +154,10 @@ export function CollectorBoosterDetail({ product }: Props) {
           )}
 
           {/* Price History */}
-          {(showOverview || showPrice) && (
+          {(showOverview || showPrice) && product.priceHistory.length > 0 && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} />
+              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
             </View>
           )}
 

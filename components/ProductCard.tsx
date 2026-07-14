@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radius, Spacing } from './tokens';
 import type { Product } from '../data/types';
+import { useProductArt } from '../data/scryfall';
 
 const TYPE_LABELS: Record<string, string> = {
   'play-booster-box':      'Play Booster Box',
@@ -33,18 +34,30 @@ interface Props {
   compact?: boolean;
 }
 
+
 export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOwned, compact }: Props) {
   const gradColors = TYPE_COLORS[product.productType] ?? ['#1a1a3a', '#060610'];
   const priceChange = product.priceChangePct;
   const changePositive = priceChange >= 0;
+  const [artError, setArtError] = useState(false);
+  const firstHit = product.playBoosterHits?.[0] ?? product.collectorBoosterHits?.[0];
+  const artUrl = useProductArt(product.setCode, firstHit?.name);
 
   return (
     <Pressable onPress={onPress} style={[styles.card, compact && styles.compact]}>
       {/* Art thumbnail */}
-      <LinearGradient colors={gradColors} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={[styles.thumb, compact && styles.thumbCompact]}>
-        <Text style={styles.setCode}>{product.setCode}</Text>
+      <View style={[styles.thumb, compact && styles.thumbCompact]}>
+        <LinearGradient colors={gradColors} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={StyleSheet.absoluteFill} />
+        {artUrl && !artError && (
+          <Image
+            source={{ uri: artUrl }}
+            style={[StyleSheet.absoluteFill, { opacity: 0.65 }]}
+            resizeMode="cover"
+            onError={() => setArtError(true)}
+          />
+        )}
         {isOwned && <View style={styles.ownedDot} />}
-      </LinearGradient>
+      </View>
 
       {/* Info */}
       <View style={styles.info}>
@@ -58,12 +71,18 @@ export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOw
         {!compact && <Text style={styles.setName}>{product.setName}</Text>}
 
         <View style={styles.priceRow}>
-          <Text style={styles.price}>${product.currentMarketPrice.toFixed(2)}</Text>
-          <View style={[styles.changePill, changePositive ? styles.pillUp : styles.pillDown]}>
-            <Text style={[styles.changeText, changePositive ? styles.textUp : styles.textDown]}>
-              {changePositive ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
-            </Text>
-          </View>
+          {product.currentMarketPrice > 0 ? (
+            <>
+              <Text style={styles.price}>${product.currentMarketPrice.toFixed(2)}</Text>
+              <View style={[styles.changePill, changePositive ? styles.pillUp : styles.pillDown]}>
+                <Text style={[styles.changeText, changePositive ? styles.textUp : styles.textDown]}>
+                  {changePositive ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
+                </Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.priceNA}>Price N/A</Text>
+          )}
         </View>
       </View>
 
@@ -99,7 +118,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   thumbCompact: { width: 56, height: 64 },
-  setCode: { fontSize: 11, fontWeight: '900', color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5, textAlign: 'center' },
   ownedDot: {
     position: 'absolute',
     top: 6, right: 6,
@@ -123,6 +141,7 @@ const styles = StyleSheet.create({
   setName: { fontSize: 11, color: Colors.text3, fontWeight: '500' },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   price: { fontSize: 15, fontWeight: '800', color: Colors.text1, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
+  priceNA: { fontSize: 12, fontWeight: '600', color: Colors.text3, fontStyle: 'italic' },
   changePill: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: Radius.full },
   pillUp: { backgroundColor: Colors.successBg },
   pillDown: { backgroundColor: Colors.dangerBg },

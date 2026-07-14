@@ -1,7 +1,14 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { CollectionItem, WatchlistItem } from './types';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import type { CollectionItem, WatchlistItem, Product } from './types';
+import { PRODUCTS } from './products';
+import { fetchSealedPrices } from './manapool';
+import { fetchScryfallSets } from './scryfall';
+import { buildProductCatalog, buildCatalogFromScryfall } from './productCatalog';
 
 interface UserState {
+  products: Product[];
+  productsLoading: boolean;
+  refreshProducts: () => void;
   collection: CollectionItem[];
   watchlist: WatchlistItem[];
   recentlyViewed: string[];
@@ -25,9 +32,60 @@ let idCounter = 1;
 function genId() { return `item-${idCounter++}`; }
 
 export function UserStateProvider({ children }: { children: React.ReactNode }) {
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [collection, setCollection] = useState<CollectionItem[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
+
+  const loadProducts = useCallback(async () => {
+    setProductsLoading(true);
+    try {
+      // Fetch Scryfall sets and Manapool prices in parallel
+      const [scryfallSets, manapoolListings] = await Promise.allSettled([
+        fetchScryfallSets(),
+        fetchSealedPrices(),
+      ]);
+
+      if (scryfallSets.status === 'rejected') throw scryfallSets.reason;
+      const sets = scryfallSets.value;
+      const scryfallCatalog = buildCatalogFromScryfall(sets);
+
+      // Try Manapool price enrichment (may 403 — that's OK)
+      const priceById = new Map<string, number>();
+      const priceByTypeKey = new Map<string, number>();
+      try {
+        if (manapoolListings.status === 'rejected') throw manapoolListings.reason;
+        const priced = buildProductCatalog(manapoolListings.value, sets);
+        for (const p of priced) {
+          priceById.set(p.id, p.currentMarketPrice);
+          // fallback key for when Manapool name doesn't exactly match Scryfall name+suffix
+          priceByTypeKey.set(`${p.setCode.toLowerCase()}-${p.productType}`, p.currentMarketPrice);
+        }
+      } catch (err) {
+        console.warn('[VaultMark] Manapool price fetch failed, products will show Price N/A:', err);
+      }
+
+      // Static PRODUCTS carry rich metadata (EV, recommendations). Prefer them
+      // for any set+type they cover; fill the rest from the Scryfall catalog.
+      const staticKeys = new Set(PRODUCTS.map(p => `${p.setCode}-${p.productType}`));
+      const extra = scryfallCatalog
+        .filter(p => !staticKeys.has(`${p.setCode}-${p.productType}`))
+        .map(p => {
+          const price = priceById.get(p.id) ?? priceByTypeKey.get(`${p.setCode.toLowerCase()}-${p.productType}`);
+          return price != null && price > 0 ? { ...p, currentMarketPrice: price } : p;
+        });
+
+      setProducts([...PRODUCTS, ...extra]);
+    } catch (err) {
+      console.warn('[VaultMark] Scryfall fetch failed, using static catalog:', err);
+      // keep static PRODUCTS fallback
+    } finally {
+      setProductsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadProducts(); }, [loadProducts]);
 
   const addToCollection = useCallback((item: Omit<CollectionItem, 'id'>) => {
     setCollection(prev => {
@@ -85,6 +143,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <UserStateContext.Provider value={{
+      products, productsLoading, refreshProducts: loadProducts,
       collection, watchlist, recentlyViewed,
       addToCollection, updateCollectionItem, removeFromCollection,
       addToWatchlist, updateWatchlistItem, removeFromWatchlist,

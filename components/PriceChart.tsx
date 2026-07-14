@@ -1,44 +1,41 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { Colors, Radius, Spacing, Typography } from './tokens';
+import type { PricePoint } from '../data/types';
 
-const PERIODS = ['1W', '1M', '3M', 'All'] as const;
+const PERIODS = ['1W', '1M', 'All'] as const;
 type Period = typeof PERIODS[number];
-
-const DATA: Record<Period, number[]> = {
-  '1W': [143.20, 140.80, 144.50, 146.10, 145.30, 147.80, 149.99],
-  '1M': [
-    132,128,125,130,133,135,131,129,134,138,
-    136,140,137,142,145,143,148,146,149,147,
-    144,149,151,148,152,150,149,152,148,149.99,
-  ],
-  '3M': [
-    118,120,122,119,125,124,128,126,130,127,
-    132,130,128,133,135,132,136,134,138,135,
-    140,138,136,141,143,140,144,142,145,143,
-    138,140,142,139,144,143,147,145,148,146,
-    143,148,150,147,151,149,150,153,149,149.99,
-  ],
-  'All': [
-    105,108,112,110,115,113,118,116,120,118,
-    115,120,122,119,125,123,127,125,130,128,
-    125,130,132,129,134,132,136,134,138,136,
-    133,138,140,137,142,140,144,142,145,143,
-    149.99,
-  ],
-};
 
 interface Props {
   currentPrice: string;
   weekChange: string;
+  priceHistory: PricePoint[];
 }
 
-export function PriceChart({ currentPrice, weekChange }: Props) {
-  const [period, setPeriod] = useState<Period>('1M');
-  const chartWidth = Dimensions.get('window').width - 72; // 36px padding each side
+function filterHistory(history: PricePoint[], period: Period): number[] {
+  if (history.length === 0) return [0, 0];
+  const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+  const days = period === '1W' ? 7 : period === '1M' ? 30 : Infinity;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const filtered = days === Infinity
+    ? sorted
+    : sorted.filter(p => new Date(p.date) >= cutoff);
+  const prices = (filtered.length >= 2 ? filtered : sorted).map(p => p.price);
+  return prices.length >= 2 ? prices : [prices[0], prices[0]];
+}
 
-  const prices = DATA[period];
+function formatAxisDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+export function PriceChart({ currentPrice, weekChange, priceHistory }: Props) {
+  const [period, setPeriod] = useState<Period>('1M');
+  const chartWidth = Dimensions.get('window').width - 72;
+
+  const prices = filterHistory(priceHistory, period);
   const minP = Math.min(...prices) - 2;
   const maxP = Math.max(...prices) + 2;
   const H = 90;
@@ -50,9 +47,21 @@ export function PriceChart({ currentPrice, weekChange }: Props) {
 
   const linePath = prices.map((p, i) => `${i === 0 ? 'M' : 'L'}${xp(i).toFixed(1)},${yp(p).toFixed(1)}`).join(' ');
   const areaPath = `${linePath} L${xp(prices.length - 1).toFixed(1)},${H} L0,${H} Z`;
-
   const lastX = xp(prices.length - 1);
   const lastY = yp(prices[prices.length - 1]);
+
+  const sorted = [...priceHistory].sort((a, b) => a.date.localeCompare(b.date));
+  const firstDate = sorted[0]?.date ?? '';
+  const midDate = sorted[Math.floor(sorted.length / 2)]?.date ?? '';
+  const lastDate = sorted[sorted.length - 1]?.date ?? '';
+
+  const axisLeft = period === '1W'
+    ? formatAxisDate(sorted.slice(-7)[0]?.date ?? firstDate)
+    : period === '1M' ? formatAxisDate(firstDate)
+    : formatAxisDate(firstDate);
+
+  const axisMid = formatAxisDate(midDate);
+  const axisRight = formatAxisDate(lastDate);
 
   return (
     <View style={styles.card}>
@@ -77,7 +86,6 @@ export function PriceChart({ currentPrice, weekChange }: Props) {
             <Stop offset="1" stopColor={Colors.accent} stopOpacity="0" />
           </LinearGradient>
         </Defs>
-        {/* Grid lines */}
         {[1, 2, 3].map(i => (
           <Path
             key={i}
@@ -86,19 +94,16 @@ export function PriceChart({ currentPrice, weekChange }: Props) {
             strokeWidth={1}
           />
         ))}
-        {/* Area */}
         <Path d={areaPath} fill="url(#areaGrad)" />
-        {/* Line */}
         <Path d={linePath} fill="none" stroke={Colors.accent} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-        {/* Endpoint */}
         <Circle cx={lastX} cy={lastY} r={7} fill={Colors.accentGlow} />
         <Circle cx={lastX} cy={lastY} r={3.5} fill={Colors.accent} />
       </Svg>
 
       <View style={styles.axisRow}>
-        <Text style={styles.axisLabel}>{period === '1W' ? 'Jul 4' : period === '1M' ? 'Jun 11' : period === '3M' ? 'Apr 11' : 'Jan'}</Text>
-        <Text style={styles.axisLabel}>{period === '1W' ? 'Jul 7' : period === '1M' ? 'Jun 26' : period === '3M' ? 'Jun 1' : 'Apr'}</Text>
-        <Text style={styles.axisLabel}>Jul 11</Text>
+        <Text style={styles.axisLabel}>{axisLeft}</Text>
+        <Text style={styles.axisLabel}>{axisMid}</Text>
+        <Text style={styles.axisLabel}>{axisRight}</Text>
       </View>
     </View>
   );
