@@ -24,7 +24,12 @@ interface ChipRowProps {
 
 export function FilterChipRow({ options, value, onChange }: ChipRowProps) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.scroll}
+      contentContainerStyle={styles.row}
+    >
       {options.map(opt => (
         <FilterChip key={opt} label={opt} active={value === opt} onPress={() => onChange(opt)} />
       ))}
@@ -33,7 +38,8 @@ export function FilterChipRow({ options, value, onChange }: ChipRowProps) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: 2 },
+  scroll: { flexGrow: 0, flexShrink: 0 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
   chip: {
     paddingHorizontal: Spacing.md,
     paddingVertical: 7,
@@ -41,11 +47,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
+    alignSelf: 'center',
   },
   chipActive: {
     backgroundColor: 'rgba(139,92,246,0.18)',
     borderColor: Colors.accent,
   },
-  label: { fontSize: 12, fontWeight: '600', color: Colors.text3 },
+  label: { fontSize: 12, fontWeight: '600', color: Colors.text2 },
   labelActive: { color: Colors.accent },
 });
