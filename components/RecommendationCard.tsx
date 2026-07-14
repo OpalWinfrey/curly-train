@@ -4,9 +4,8 @@ import { Colors, Radius, Spacing } from './tokens';
 
 interface Props {
   signal: 'BUY' | 'HOLD' | 'WAIT' | 'SKIP';
-  bullets: string[];
-  confidence: number;  // 1–5
-  confidenceLabel: string;  // "High"
+  rationale: string;
+  confidence: number;  // 0–100
 }
 
 const SIGNAL_COLOR: Record<string, string> = {
@@ -16,10 +15,12 @@ const SIGNAL_COLOR: Record<string, string> = {
   SKIP: Colors.danger,
 };
 
-export function RecommendationCard({ signal, bullets, confidence, confidenceLabel }: Props) {
+export function RecommendationCard({ signal, rationale, confidence }: Props) {
   const signalColor = SIGNAL_COLOR[signal] ?? Colors.success;
+  const bullets = rationale ? rationale.split('. ').map(s => s.replace(/\.$/, '')).filter(Boolean) : ['No rationale available'];
+  const confidenceBars = Math.max(1, Math.min(5, Math.round(confidence / 20)));
+  const confidenceLabel = confidence >= 80 ? 'High' : confidence >= 60 ? 'Med' : 'Low';
 
-  // Bar heights increase from left to right (signal-strength style)
   const BAR_HEIGHTS = [10, 14, 18, 22, 26];
 
   return (
@@ -55,7 +56,7 @@ export function RecommendationCard({ signal, bullets, confidence, confidenceLabe
                 style={[
                   styles.confBar,
                   { height: h },
-                  i < confidence
+                  i < confidenceBars
                     ? { backgroundColor: signalColor }
                     : { backgroundColor: 'rgba(255,255,255,0.08)' },
                 ]}
