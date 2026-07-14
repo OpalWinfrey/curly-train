@@ -7,6 +7,8 @@ export type ProductType =
   | 'commander-deck'
   | 'secret-lair';
 
+export type Game = 'mtg' | 'pokemon';
+
 export type Recommendation = 'BUY' | 'HOLD' | 'WAIT' | 'SKIP';
 export type Rarity = 'M' | 'R' | 'U' | 'C';
 export type Condition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
@@ -21,6 +23,7 @@ export interface CardHit {
   artColors: [string, string];
   artInitial: string;
   setName?: string;
+  imageUri?: string;
 }
 
 export interface IncludedCard {
@@ -84,6 +87,7 @@ export interface Product {
   setName: string;
   setCode: string;
   productType: ProductType;
+  game: Game;
   releaseDate: string;
   currentMarketPrice: number;
   priceChangeWeek: number;
