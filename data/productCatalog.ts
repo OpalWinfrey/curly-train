@@ -58,6 +58,9 @@ export function buildCatalogFromScryfall(
 }
 
 export function inferProductType(name: string): ProductType | null {
+  // Exclude multi-box cases and displays (e.g. "Booster Box Display", "6-Box Case")
+  if (/display|case|\b6[ -]?box/i.test(name)) return null;
+
   if (name.includes('Collector Booster Box')) return 'collector-booster-box';
   if (name.includes('Set Booster Box')) return 'set-booster-box';
   if (name.includes('Draft Booster Box')) return 'draft-booster-box';
