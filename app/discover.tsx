@@ -9,7 +9,13 @@ import { EmptyState } from '../components/EmptyState';
 import { SectionHeader } from '../components/SectionHeader';
 import { Colors, Spacing } from '../components/tokens';
 import { useUserState } from '../data/userState';
-import type { ProductType } from '../data/types';
+import type { ProductType, Game } from '../data/types';
+
+const GAME_FILTERS = ['All', 'MTG', 'Pokemon'];
+const GAME_MAP: Record<string, Game | undefined> = {
+  'MTG': 'mtg',
+  'Pokemon': 'pokemon',
+};
 
 const TYPE_FILTERS = ['All', 'Play Booster Box', 'Collector Booster Box', 'Secret Lair', 'Bundle', 'Commander Deck'];
 const TYPE_MAP: Record<string, ProductType | undefined> = {
@@ -26,6 +32,7 @@ export default function DiscoverScreen() {
   const router = useRouter();
   const { products, isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
   const [query, setQuery] = useState('');
+  const [gameFilter, setGameFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [sort, setSort] = useState('Price: High');
 
@@ -39,6 +46,11 @@ export default function DiscoverScreen() {
         p.setName.toLowerCase().includes(q) ||
         p.setCode.toLowerCase().includes(q)
       );
+    }
+
+    if (gameFilter !== 'All') {
+      const mappedGame = GAME_MAP[gameFilter];
+      if (mappedGame) results = results.filter(p => p.game === mappedGame);
     }
 
     if (typeFilter !== 'All') {
@@ -58,7 +70,7 @@ export default function DiscoverScreen() {
     });
 
     return results;
-  }, [products, query, typeFilter, sort]);
+  }, [products, query, gameFilter, typeFilter, sort]);
 
   function toggleWatchlist(productId: string) {
     const wItem = getWatchlistItem(productId);
@@ -85,6 +97,7 @@ export default function DiscoverScreen() {
         <SearchBar value={query} onChangeText={setQuery} placeholder="Search products, sets, formats…" autoFocus={false} />
       </View>
 
+      <FilterChipRow options={GAME_FILTERS} value={gameFilter} onChange={(g) => { setGameFilter(g); setTypeFilter('All'); }} />
       <FilterChipRow options={TYPE_FILTERS} value={typeFilter} onChange={setTypeFilter} />
 
       <View style={styles.sortRow}>
@@ -100,7 +113,7 @@ export default function DiscoverScreen() {
           title="No Products Found"
           subtitle={`No results for "${query}". Try a different search term or filter.`}
           ctaLabel="Clear Search"
-          onCta={() => { setQuery(''); setTypeFilter('All'); }}
+          onCta={() => { setQuery(''); setGameFilter('All'); setTypeFilter('All'); }}
         />
       ) : (
         <FlatList
@@ -109,7 +122,7 @@ export default function DiscoverScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            query || typeFilter !== 'All' ? (
+            query || gameFilter !== 'All' || typeFilter !== 'All' ? (
               <Text style={styles.resultCount}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</Text>
             ) : null
           }
