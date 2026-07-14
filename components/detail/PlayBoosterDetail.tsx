@@ -17,6 +17,7 @@ import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
 import { useUserState } from '../../data/userState';
 import { useProductArt } from '../../data/scryfall';
+import { useSetEV } from '../../data/useSetEV';
 import type { Product, Condition } from '../../data/types';
 
 const TABS = ['Overview', 'Play Booster Hits', 'EV Breakdown', 'Price History'] as const;
@@ -33,6 +34,13 @@ export function PlayBoosterDetail({ product }: Props) {
 
   const inCollection = isInCollection(product.id);
   const inWatchlist = isInWatchlist(product.id);
+  const { loading: evLoading, evData } = useSetEV(product.setCode);
+
+  // Prefer live Scryfall-computed data; fall back to static data in products.ts
+  const liveEV = evData?.expectedValue ?? product.expectedValue;
+  const liveSegments = evData?.evSegments ?? product.evSegments;
+  const liveHits = evData?.topHits ?? product.playBoosterHits;
+  const isLive = !!evData;
 
   const changeSign = product.priceChangeWeek >= 0 ? '+' : '';
   const weekChange = `${changeSign}$${Math.abs(product.priceChangeWeek).toFixed(2)} · ${changeSign}${product.priceChangePct.toFixed(2)}%`;
@@ -88,7 +96,7 @@ export function PlayBoosterDetail({ product }: Props) {
           heroImageUrl={heroImageUrl}
           metrics={[
             { label: 'Market Price', value: `$${product.currentMarketPrice.toFixed(2)}`, sub: `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` },
-            { label: 'Expected EV', value: `$${(product.expectedValue ?? 0).toFixed(2)}`, sub: `${(((product.expectedValue ?? 0) / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
+            { label: 'Expected EV', value: evLoading ? '…' : `$${(liveEV ?? 0).toFixed(2)}`, sub: evLoading ? 'Loading…' : `${(((liveEV ?? 0) / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
             { label: 'Investment Score', value: String(product.investmentScore ?? 0), sub: product.investmentScore! >= 80 ? 'EXCELLENT' : product.investmentScore! >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: product.investmentScore ?? 0 },
           ]}
         />
@@ -127,15 +135,30 @@ export function PlayBoosterDetail({ product }: Props) {
             </View>
           )}
 
-          {(showOverview || showEV) && product.evSegments && (
+          {(showOverview || showEV) && (liveSegments || evLoading) && (
             <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="Per Box Opening" title="Expected Value Breakdown" /></View>
-              <ValueBreakdown totalEV={`$${(product.expectedValue ?? 0).toFixed(2)}`} segments={product.evSegments} />
+              <View style={styles.sectionHead}>
+                <SectionHeader eyebrow="Per Box Opening" title="Expected Value Breakdown" />
+                {isLive && <Text style={styles.liveBadge}>LIVE</Text>}
+              </View>
+              {evLoading && !liveSegments
+                ? <View style={styles.loadingBox}><Text style={styles.loadingText}>Computing EV from live card prices…</Text></View>
+                : liveSegments && <ValueBreakdown totalEV={`$${(liveEV ?? 0).toFixed(2)}`} segments={liveSegments} />}
             </View>
           )}
 
-          {(showOverview || showHits) && product.playBoosterHits && (
-            <TopHitCard hits={product.playBoosterHits} totalCount={50} />
+          {(showOverview || showHits) && (liveHits || evLoading) && (
+            <View>
+              {isLive && (
+                <View style={styles.liveRow}>
+                  <Text style={styles.liveBadge}>LIVE</Text>
+                  {evData?.lastUpdated && <Text style={styles.liveDate}>Updated {evData.lastUpdated}</Text>}
+                </View>
+              )}
+              {evLoading && !liveHits
+                ? <View style={styles.loadingBox}><Text style={styles.loadingText}>Fetching booster hit data…</Text></View>
+                : liveHits && <TopHitCard hits={liveHits} totalCount={liveHits.length} />}
+            </View>
           )}
 
           {(showOverview || showPrice) && product.priceHistory.length > 0 && (
@@ -238,4 +261,9 @@ const styles = StyleSheet.create({
   ctaSecondary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   ctaPrimaryText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   ctaSecondaryText: { fontSize: 14, fontWeight: '700', color: Colors.text2 },
+  liveBadge: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8, color: Colors.success, borderWidth: 1, borderColor: Colors.success, borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, alignSelf: 'flex-start' },
+  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  liveDate: { fontSize: 10, color: Colors.text3 },
+  loadingBox: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.xl, alignItems: 'center' },
+  loadingText: { fontSize: 13, color: Colors.text3 },
 });
