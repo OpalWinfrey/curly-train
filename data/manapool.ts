@@ -1,24 +1,24 @@
-export interface ManapoolSealedProduct {
-  MTGJsonID: string;
-  Name: string;
-  Set: string;
-  LanguageID: string;
-}
-
 export interface ManapoolSealedListing {
-  MTGJsonID: string;
-  PriceCents: number;
-  Sealed: ManapoolSealedProduct;
+  product_id: string;
+  product_type: string;
+  language_id: string;
+  set_code: string;
+  name: string;
+  tcgplayer_product_id: number;
+  low_price: number | null;
+  price_market: number | null;
+  available_quantity: number;
+  url: string;
 }
 
 interface ManapoolSealedResponse {
-  Meta: { LastUpdated: string; Total: number };
-  Listings: ManapoolSealedListing[];
+  meta: { as_of: string };
+  data: ManapoolSealedListing[];
 }
 
 export async function fetchSealedPrices(): Promise<ManapoolSealedListing[]> {
-  const res = await fetch('https://manapool.com/api/v1/prices/sealed');
+  const res = await fetch('/api/manapool-prices');
   if (!res.ok) throw new Error(`Manapool API error: ${res.status}`);
   const data: ManapoolSealedResponse = await res.json();
-  return (data.Listings ?? []).filter(l => l.Sealed.LanguageID === 'en');
+  return (data.data ?? []).filter(l => l.language_id === 'EN');
 }

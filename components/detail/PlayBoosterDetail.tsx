@@ -16,7 +16,7 @@ import { AddToCollectionModal } from '../AddToCollectionModal';
 import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
 import { useUserState } from '../../data/userState';
-import { scryfallCardArt } from '../../data/scryfall';
+import { useProductArt } from '../../data/scryfall';
 import type { Product, Condition } from '../../data/types';
 
 const TABS = ['Overview', 'Play Booster Hits', 'EV Breakdown', 'Price History'] as const;
@@ -54,7 +54,7 @@ export function PlayBoosterDetail({ product }: Props) {
 
   const setLines = product.setName.split(':');
   const title = setLines.length > 1 ? `${setLines[0]}:\n${setLines[1].trim()}` : product.setName;
-  const heroImageUrl = product.playBoosterHits?.[0]?.name ? scryfallCardArt(product.playBoosterHits[0].name) : undefined;
+  const heroImageUrl = useProductArt(product.setCode, product.playBoosterHits?.[0]?.name) ?? undefined;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -138,10 +138,10 @@ export function PlayBoosterDetail({ product }: Props) {
             <TopHitCard hits={product.playBoosterHits} totalCount={50} />
           )}
 
-          {(showOverview || showPrice) && (
+          {(showOverview || showPrice) && product.priceHistory.length > 0 && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory ?? []} />
+              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
             </View>
           )}
 

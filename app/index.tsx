@@ -11,7 +11,7 @@ import { ProductCard } from '../components/ProductCard';
 import { SectionHeader } from '../components/SectionHeader';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
-import { scryfallCardArt } from '../data/scryfall';
+import { useProductArt } from '../data/scryfall';
 import type { Product } from '../data/types';
 
 function ReleaseCard({ product, onPress }: { product: Product; onPress: () => void }) {
@@ -22,7 +22,7 @@ function ReleaseCard({ product, onPress }: { product: Product; onPress: () => vo
     ? ['#3a1a6a', '#0d061a']
     : ['#1a3a6a', '#060d1a'];
   const firstHit = product.playBoosterHits?.[0] ?? product.collectorBoosterHits?.[0];
-  const artUrl = firstHit ? scryfallCardArt(firstHit.name) : null;
+  const artUrl = useProductArt(product.setCode, firstHit?.name);
 
   return (
     <Pressable onPress={onPress} style={styles.releaseCard}>

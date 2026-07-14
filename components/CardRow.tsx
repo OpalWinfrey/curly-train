@@ -14,6 +14,7 @@ export interface CardHit {
   artColors: [string, string];
   artInitial: string;
   setName?: string;
+  imageUri?: string;
 }
 
 interface Props {
@@ -37,7 +38,7 @@ export function CardRow({ hit, isLast }: Props) {
       {/* Thumbnail — card art if available, gradient fallback */}
       {!imgError ? (
         <Image
-          source={{ uri: scryfallCardArt(hit.name) }}
+          source={{ uri: hit.imageUri ?? scryfallCardArt(hit.name) }}
           style={styles.thumb}
           resizeMode="cover"
           onError={() => setImgError(true)}

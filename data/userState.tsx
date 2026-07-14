@@ -3,7 +3,7 @@ import type { CollectionItem, WatchlistItem, Product } from './types';
 import { PRODUCTS } from './products';
 import { fetchSealedPrices } from './manapool';
 import { fetchScryfallSets } from './scryfall';
-import { buildProductCatalog } from './productCatalog';
+import { buildProductCatalog, buildCatalogFromScryfall } from './productCatalog';
 
 interface UserState {
   products: Product[];
@@ -41,13 +41,44 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   const loadProducts = useCallback(async () => {
     setProductsLoading(true);
     try {
-      const [listings, scryfallSets] = await Promise.all([
-        fetchSealedPrices(),
+      // Fetch Scryfall sets and Manapool prices in parallel
+      const [scryfallSets, manapoolListings] = await Promise.allSettled([
         fetchScryfallSets(),
+        fetchSealedPrices(),
       ]);
-      const live = buildProductCatalog(listings, scryfallSets);
-      if (live.length > 0) setProducts(live);
-    } catch {
+
+      if (scryfallSets.status === 'rejected') throw scryfallSets.reason;
+      const sets = scryfallSets.value;
+      const scryfallCatalog = buildCatalogFromScryfall(sets);
+
+      // Try Manapool price enrichment (may 403 — that's OK)
+      const priceById = new Map<string, number>();
+      const priceByTypeKey = new Map<string, number>();
+      try {
+        if (manapoolListings.status === 'rejected') throw manapoolListings.reason;
+        const priced = buildProductCatalog(manapoolListings.value, sets);
+        for (const p of priced) {
+          priceById.set(p.id, p.currentMarketPrice);
+          // fallback key for when Manapool name doesn't exactly match Scryfall name+suffix
+          priceByTypeKey.set(`${p.setCode.toLowerCase()}-${p.productType}`, p.currentMarketPrice);
+        }
+      } catch (err) {
+        console.warn('[VaultMark] Manapool price fetch failed, products will show Price N/A:', err);
+      }
+
+      // Static PRODUCTS carry rich metadata (EV, recommendations). Prefer them
+      // for any set+type they cover; fill the rest from the Scryfall catalog.
+      const staticKeys = new Set(PRODUCTS.map(p => `${p.setCode}-${p.productType}`));
+      const extra = scryfallCatalog
+        .filter(p => !staticKeys.has(`${p.setCode}-${p.productType}`))
+        .map(p => {
+          const price = priceById.get(p.id) ?? priceByTypeKey.get(`${p.setCode.toLowerCase()}-${p.productType}`);
+          return price != null && price > 0 ? { ...p, currentMarketPrice: price } : p;
+        });
+
+      setProducts([...PRODUCTS, ...extra]);
+    } catch (err) {
+      console.warn('[VaultMark] Scryfall fetch failed, using static catalog:', err);
       // keep static PRODUCTS fallback
     } finally {
       setProductsLoading(false);
