@@ -81,25 +81,26 @@ export function buildProductCatalog(
   const products: Product[] = [];
 
   for (const listing of listings) {
-    const { Name, Set } = listing.Sealed;
-    const productType = inferProductType(Name);
+    const { name, set_code } = listing;
+    const productType = inferProductType(name);
     if (!productType) continue;
 
     // Use name slug to disambiguate same-set products (Secret Lairs, multi-deck sets)
-    const setCode = Set.toUpperCase();
-    const id = `${setCode.toLowerCase()}-${nameSlug(Name)}`;
+    const setCode = set_code.toUpperCase();
+    const id = `${setCode.toLowerCase()}-${nameSlug(name)}`;
     if (seen.has(id)) continue;
     seen.add(id);
 
     // Skip products with no price — makeHistory would produce negative values
-    if (listing.PriceCents <= 0) continue;
+    const priceCents = listing.price_market ?? listing.low_price;
+    if (!priceCents || priceCents <= 0) continue;
 
-    const price = listing.PriceCents / 100;
+    const price = priceCents / 100;
     const setMeta = scryfallSets[setCode];
 
     products.push({
       id,
-      name: Name,
+      name,
       setName: setMeta?.name ?? setCode,
       setCode,
       productType,
