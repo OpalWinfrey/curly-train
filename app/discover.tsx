@@ -17,13 +17,15 @@ const GAME_MAP: Record<string, Game | undefined> = {
   'Pokemon': 'pokemon',
 };
 
-const TYPE_FILTERS = ['All', 'Play Booster Box', 'Collector Booster Box', 'Secret Lair', 'Bundle', 'Commander Deck'];
-const TYPE_MAP: Record<string, ProductType | undefined> = {
-  'Play Booster Box': 'play-booster-box',
-  'Collector Booster Box': 'collector-booster-box',
-  'Secret Lair': 'secret-lair',
-  'Bundle': 'bundle',
-  'Commander Deck': 'commander-deck',
+const TYPE_FILTERS = ['All', 'Play Booster Box', 'Play Booster Case', 'Collector Booster Box', 'Collector Case', 'Secret Lair', 'Bundle', 'Commander Deck'];
+const TYPE_MAP: Record<string, ProductType[]> = {
+  'Play Booster Box':      ['play-booster-box', 'draft-booster-box', 'set-booster-box'],
+  'Play Booster Case':     ['play-booster-case'],
+  'Collector Booster Box': ['collector-booster-box'],
+  'Collector Case':        ['collector-booster-case'],
+  'Secret Lair':           ['secret-lair'],
+  'Bundle':                ['bundle'],
+  'Commander Deck':        ['commander-deck'],
 };
 
 const SORT_OPTIONS = ['Price: High', 'Price: Low', 'Name A–Z', 'Release Date'];
@@ -54,8 +56,8 @@ export default function DiscoverScreen() {
     }
 
     if (typeFilter !== 'All') {
-      const mappedType = TYPE_MAP[typeFilter];
-      if (mappedType) results = results.filter(p => p.productType === mappedType);
+      const mappedTypes = TYPE_MAP[typeFilter];
+      if (mappedTypes) results = results.filter(p => mappedTypes.includes(p.productType));
     }
 
     results.sort((a, b) => {
