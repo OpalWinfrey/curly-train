@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   portfolioMetaText: { fontSize: 12, color: Colors.text3 },
   portfolioEmpty: { fontSize: 12, color: Colors.text3, fontStyle: 'italic' },
 
-  sectionHead: { marginBottom: -Spacing.sm },
+  sectionHead: { marginBottom: Spacing.sm },
 
   horizontalList: { gap: Spacing.md, paddingVertical: 2 },
   watchChip: {
