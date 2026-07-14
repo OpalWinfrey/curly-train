@@ -243,7 +243,7 @@ export default function AddProductScreen() {
                 <Text style={styles.currSign}>$</Text>
                 <TextInput style={styles.textInput} value={targetPrice} onChangeText={setTargetPrice} keyboardType="decimal-pad" autoFocus selectTextOnFocus />
               </View>
-              {parseFloat(targetPrice) > 0 && (
+              {parseFloat(targetPrice) > 0 && selectedProduct.currentMarketPrice > 0 && (
                 <Text style={[styles.targetHint, parseFloat(targetPrice) <= selectedProduct.currentMarketPrice ? styles.hintGood : styles.hintBad]}>
                   {parseFloat(targetPrice) <= selectedProduct.currentMarketPrice
                     ? `${(((selectedProduct.currentMarketPrice - parseFloat(targetPrice)) / selectedProduct.currentMarketPrice) * 100).toFixed(1)}% below current price`
@@ -285,7 +285,7 @@ export default function AddProductScreen() {
                   <ConfirmRow label="Condition" value={condition} />
                   {notes ? <ConfirmRow label="Notes" value={notes} /> : null}
                   <View style={styles.divider} />
-                  <ConfirmRow label="Total Invested" value={`$${(parseFloat(purchasePrice || '0') * parseInt(quantity || '1')).toFixed(2)}`} highlight />
+                  <ConfirmRow label="Total Invested" value={`$${((parseFloat(purchasePrice) || 0) * (Math.max(1, parseInt(quantity) || 1))).toFixed(2)}`} highlight />
                 </>
               ) : (
                 <>

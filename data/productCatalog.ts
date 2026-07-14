@@ -15,6 +15,10 @@ export function inferProductType(name: string): ProductType | null {
   return null;
 }
 
+function nameSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
 export function buildProductCatalog(
   listings: ManapoolSealedListing[],
   scryfallSets: Record<string, ScryfallSetMeta>,
@@ -27,10 +31,14 @@ export function buildProductCatalog(
     const productType = inferProductType(Name);
     if (!productType) continue;
 
+    // Use name slug to disambiguate same-set products (Secret Lairs, multi-deck sets)
     const setCode = Set.toUpperCase();
-    const id = `${setCode.toLowerCase()}-${productType}`;
+    const id = `${setCode.toLowerCase()}-${nameSlug(Name)}`;
     if (seen.has(id)) continue;
     seen.add(id);
+
+    // Skip products with no price — makeHistory would produce negative values
+    if (listing.PriceCents <= 0) continue;
 
     const price = listing.PriceCents / 100;
     const setMeta = scryfallSets[setCode];

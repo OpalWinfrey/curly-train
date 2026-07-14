@@ -18,8 +18,8 @@ export default function WatchlistScreen() {
   const [purchaseItem, setPurchaseItem] = useState<{ wItem: WatchlistItem; product: Product } | null>(null);
 
   const enriched = watchlist
-    .map(wItem => ({ wItem, product: products.find(p => p.id === wItem.productId)! }))
-    .filter(e => e.product != null);
+    .map(wItem => ({ wItem, product: products.find(p => p.id === wItem.productId) }))
+    .filter((e): e is { wItem: typeof e.wItem; product: NonNullable<typeof e.product> } => e.product != null);
 
   const atTarget = enriched.filter(e => e.product.currentMarketPrice <= e.wItem.targetPrice);
   const aboveTarget = enriched.filter(e => e.product.currentMarketPrice > e.wItem.targetPrice);

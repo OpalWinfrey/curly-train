@@ -23,8 +23,8 @@ export default function CollectionScreen() {
   const [editItem, setEditItem] = useState<{ item: CollectionItem; product: Product } | null>(null);
 
   const enriched = collection
-    .map(item => ({ item, product: products.find(p => p.id === item.productId)! }))
-    .filter(e => e.product != null);
+    .map(item => ({ item, product: products.find(p => p.id === item.productId) }))
+    .filter((e): e is { item: typeof e.item; product: NonNullable<typeof e.product> } => e.product != null);
 
   const sorted = [...enriched].sort((a, b) => {
     const aValue = a.product.currentMarketPrice * a.item.quantity;
@@ -44,14 +44,14 @@ export default function CollectionScreen() {
   const pnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
 
   const best = [...enriched].sort((a, b) => {
-    const aPnlPct = ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100;
-    const bPnlPct = ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100;
+    const aPnlPct = a.item.purchasePrice > 0 ? ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100 : 0;
+    const bPnlPct = b.item.purchasePrice > 0 ? ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100 : 0;
     return bPnlPct - aPnlPct;
   })[0];
 
   const worst = [...enriched].sort((a, b) => {
-    const aPnlPct = ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100;
-    const bPnlPct = ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100;
+    const aPnlPct = a.item.purchasePrice > 0 ? ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100 : 0;
+    const bPnlPct = b.item.purchasePrice > 0 ? ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100 : 0;
     return aPnlPct - bPnlPct;
   })[0];
 
@@ -133,7 +133,7 @@ export default function CollectionScreen() {
                     <Text style={[styles.performerBadge, { color: accent }]}>{label}</Text>
                     <Text style={styles.performerName} numberOfLines={1}>{product.name}</Text>
                     <Text style={[styles.performerPct, { color: accent }]}>
-                      {(() => { const p = ((product.currentMarketPrice - item.purchasePrice) / item.purchasePrice) * 100; return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`; })()}
+                      {(() => { const p = item.purchasePrice > 0 ? ((product.currentMarketPrice - item.purchasePrice) / item.purchasePrice) * 100 : 0; return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`; })()}
                     </Text>
                   </View>
                 ) : null)}

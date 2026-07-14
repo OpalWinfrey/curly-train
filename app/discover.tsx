@@ -55,7 +55,7 @@ export default function DiscoverScreen() {
     });
 
     return results;
-  }, [query, typeFilter, sort]);
+  }, [products, query, typeFilter, sort]);
 
   function toggleWatchlist(productId: string) {
     const wItem = getWatchlistItem(productId);

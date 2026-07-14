@@ -20,5 +20,5 @@ export async function fetchSealedPrices(): Promise<ManapoolSealedListing[]> {
   const res = await fetch('https://manapool.com/api/v1/prices/sealed');
   if (!res.ok) throw new Error(`Manapool API error: ${res.status}`);
   const data: ManapoolSealedResponse = await res.json();
-  return data.Listings.filter(l => l.Sealed.LanguageID === 'en');
+  return (data.Listings ?? []).filter(l => l.Sealed.LanguageID === 'en');
 }
