@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: Spacing.lg, gap: Spacing.xl, paddingBottom: Spacing.xxl },
 
-  searchTouchable: { pointerEvents: 'box-none' },
+  searchTouchable: {},
 
   portfolioCard: {
     borderRadius: Radius.xl,
