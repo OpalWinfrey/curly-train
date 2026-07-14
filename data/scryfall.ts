@@ -15,6 +15,7 @@ export function scryfallSetIcon(setCode: string): string {
 export interface ScryfallSetMeta {
   name: string;
   released_at: string;
+  set_type: string;
 }
 
 export async function fetchScryfallSets(): Promise<Record<string, ScryfallSetMeta>> {
@@ -22,8 +23,8 @@ export async function fetchScryfallSets(): Promise<Record<string, ScryfallSetMet
   if (!res.ok) throw new Error(`Scryfall sets error: ${res.status}`);
   const data = await res.json();
   const map: Record<string, ScryfallSetMeta> = {};
-  for (const set of (data.data ?? []) as { code: string; name: string; released_at: string }[]) {
-    map[set.code.toUpperCase()] = { name: set.name, released_at: set.released_at };
+  for (const set of (data.data ?? []) as { code: string; name: string; released_at: string; set_type: string }[]) {
+    map[set.code.toUpperCase()] = { name: set.name, released_at: set.released_at, set_type: set.set_type };
   }
   return map;
 }

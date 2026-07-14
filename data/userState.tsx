@@ -3,7 +3,7 @@ import type { CollectionItem, WatchlistItem, Product } from './types';
 import { PRODUCTS } from './products';
 import { fetchSealedPrices } from './manapool';
 import { fetchScryfallSets } from './scryfall';
-import { buildProductCatalog } from './productCatalog';
+import { buildProductCatalog, buildCatalogFromScryfall } from './productCatalog';
 
 interface UserState {
   products: Product[];
@@ -41,12 +41,31 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   const loadProducts = useCallback(async () => {
     setProductsLoading(true);
     try {
-      const [listings, scryfallSets] = await Promise.all([
-        fetchSealedPrices(),
-        fetchScryfallSets(),
-      ]);
-      const live = buildProductCatalog(listings, scryfallSets);
-      if (live.length > 0) setProducts(live);
+      // Scryfall is always public — build the full catalog from it first
+      const scryfallSets = await fetchScryfallSets();
+      const scryfallCatalog = buildCatalogFromScryfall(scryfallSets);
+
+      // Try Manapool price enrichment (may 403 — that's OK)
+      const priceMap = new Map<string, number>();
+      try {
+        const listings = await fetchSealedPrices();
+        const priced = buildProductCatalog(listings, scryfallSets);
+        for (const p of priced) priceMap.set(p.id, p.currentMarketPrice);
+      } catch {
+        // Manapool unavailable — prices stay 0 for Scryfall-only products
+      }
+
+      // Static PRODUCTS carry rich metadata (EV, recommendations). Prefer them
+      // for any set+type they cover; fill the rest from the Scryfall catalog.
+      const staticKeys = new Set(PRODUCTS.map(p => `${p.setCode}-${p.productType}`));
+      const extra = scryfallCatalog
+        .filter(p => !staticKeys.has(`${p.setCode}-${p.productType}`))
+        .map(p => {
+          const price = priceMap.get(p.id);
+          return price != null && price > 0 ? { ...p, currentMarketPrice: price } : p;
+        });
+
+      setProducts([...PRODUCTS, ...extra]);
     } catch {
       // keep static PRODUCTS fallback
     } finally {

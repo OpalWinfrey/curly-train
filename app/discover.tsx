@@ -47,6 +47,9 @@ export default function DiscoverScreen() {
     }
 
     results.sort((a, b) => {
+      // Always push unpriced products to the bottom
+      if (a.currentMarketPrice === 0 && b.currentMarketPrice > 0) return 1;
+      if (b.currentMarketPrice === 0 && a.currentMarketPrice > 0) return -1;
       if (sort === 'Price: High') return b.currentMarketPrice - a.currentMarketPrice;
       if (sort === 'Price: Low') return a.currentMarketPrice - b.currentMarketPrice;
       if (sort === 'Name A–Z') return a.name.localeCompare(b.name);
