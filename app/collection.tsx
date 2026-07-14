@@ -11,7 +11,6 @@ import { EmptyState } from '../components/EmptyState';
 import { SectionHeader } from '../components/SectionHeader';
 import { AddToCollectionModal } from '../components/AddToCollectionModal';
 import { Colors, Spacing, Radius } from '../components/tokens';
-import { PRODUCTS } from '../data/products';
 import { useUserState } from '../data/userState';
 import type { Condition, CollectionItem, Product } from '../data/types';
 
@@ -19,12 +18,12 @@ type SortKey = 'value' | 'pnl' | 'name' | 'date';
 
 export default function CollectionScreen() {
   const router = useRouter();
-  const { collection, removeFromCollection, updateCollectionItem } = useUserState();
+  const { products, collection, removeFromCollection, updateCollectionItem } = useUserState();
   const [sort, setSort] = useState<SortKey>('value');
   const [editItem, setEditItem] = useState<{ item: CollectionItem; product: Product } | null>(null);
 
   const enriched = collection
-    .map(item => ({ item, product: PRODUCTS.find(p => p.id === item.productId)! }))
+    .map(item => ({ item, product: products.find(p => p.id === item.productId)! }))
     .filter(e => e.product != null);
 
   const sorted = [...enriched].sort((a, b) => {

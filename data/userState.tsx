@@ -1,7 +1,14 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { CollectionItem, WatchlistItem } from './types';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import type { CollectionItem, WatchlistItem, Product } from './types';
+import { PRODUCTS } from './products';
+import { fetchSealedPrices } from './manapool';
+import { fetchScryfallSets } from './scryfall';
+import { buildProductCatalog } from './productCatalog';
 
 interface UserState {
+  products: Product[];
+  productsLoading: boolean;
+  refreshProducts: () => void;
   collection: CollectionItem[];
   watchlist: WatchlistItem[];
   recentlyViewed: string[];
@@ -25,9 +32,29 @@ let idCounter = 1;
 function genId() { return `item-${idCounter++}`; }
 
 export function UserStateProvider({ children }: { children: React.ReactNode }) {
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [collection, setCollection] = useState<CollectionItem[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
+
+  const loadProducts = useCallback(async () => {
+    setProductsLoading(true);
+    try {
+      const [listings, scryfallSets] = await Promise.all([
+        fetchSealedPrices(),
+        fetchScryfallSets(),
+      ]);
+      const live = buildProductCatalog(listings, scryfallSets);
+      if (live.length > 0) setProducts(live);
+    } catch {
+      // keep static PRODUCTS fallback
+    } finally {
+      setProductsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadProducts(); }, [loadProducts]);
 
   const addToCollection = useCallback((item: Omit<CollectionItem, 'id'>) => {
     setCollection(prev => {
@@ -85,6 +112,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <UserStateContext.Provider value={{
+      products, productsLoading, refreshProducts: loadProducts,
       collection, watchlist, recentlyViewed,
       addToCollection, updateCollectionItem, removeFromCollection,
       addToWatchlist, updateWatchlistItem, removeFromWatchlist,

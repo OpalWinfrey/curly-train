@@ -9,7 +9,6 @@ import { useRouter } from 'expo-router';
 
 import { SearchBar } from '../components/SearchBar';
 import { Colors, Spacing, Radius } from '../components/tokens';
-import { PRODUCTS } from '../data/products';
 import { useUserState } from '../data/userState';
 import type { Product, Condition } from '../data/types';
 
@@ -19,7 +18,7 @@ const CONDITIONS: Condition[] = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 
 export default function AddProductScreen() {
   const router = useRouter();
-  const { addToCollection, addToWatchlist } = useUserState();
+  const { products, addToCollection, addToWatchlist } = useUserState();
 
   const [step, setStep] = useState<Step>('search');
   const [query, setQuery] = useState('');
@@ -38,11 +37,11 @@ export default function AddProductScreen() {
   const [watchNotes, setWatchNotes] = useState('');
 
   const searchResults = query.trim()
-    ? PRODUCTS.filter(p =>
+    ? products.filter(p =>
         p.name.toLowerCase().includes(query.toLowerCase()) ||
         p.setName.toLowerCase().includes(query.toLowerCase())
       )
-    : PRODUCTS.slice(0, 6);
+    : products.slice(0, 6);
 
   function handleSelectProduct(product: Product) {
     setSelectedProduct(product);

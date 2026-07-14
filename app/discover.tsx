@@ -8,7 +8,6 @@ import { ProductCard } from '../components/ProductCard';
 import { EmptyState } from '../components/EmptyState';
 import { SectionHeader } from '../components/SectionHeader';
 import { Colors, Spacing } from '../components/tokens';
-import { PRODUCTS } from '../data/products';
 import { useUserState } from '../data/userState';
 import type { ProductType } from '../data/types';
 
@@ -25,13 +24,13 @@ const SORT_OPTIONS = ['Price: High', 'Price: Low', 'Name A–Z', 'Release Date']
 
 export default function DiscoverScreen() {
   const router = useRouter();
-  const { isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
+  const { products, isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [sort, setSort] = useState('Price: High');
 
   const filtered = useMemo(() => {
-    let results = [...PRODUCTS];
+    let results = [...products];
 
     if (query.trim()) {
       const q = query.toLowerCase();
@@ -63,7 +62,7 @@ export default function DiscoverScreen() {
     if (wItem) {
       removeFromWatchlist(wItem.id);
     } else {
-      const product = PRODUCTS.find(p => p.id === productId);
+      const product = products.find(p => p.id === productId);
       if (product) {
         addToWatchlist({ productId, targetPrice: product.currentMarketPrice, dateAdded: new Date().toISOString().split('T')[0] });
       }
@@ -76,7 +75,7 @@ export default function DiscoverScreen() {
 
       <View style={styles.header}>
         <Text style={styles.title}>Discover</Text>
-        <Text style={styles.subtitle}>{PRODUCTS.length} products</Text>
+        <Text style={styles.subtitle}>{products.length} products</Text>
       </View>
 
       <View style={styles.searchWrap}>

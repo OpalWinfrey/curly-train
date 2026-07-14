@@ -2,7 +2,7 @@ import { Colors, ChartColors } from '../components/tokens';
 import type { Product } from './types';
 
 // 7-period price history helpers
-function makeHistory(current: number, trend: 'up' | 'down' | 'flat') {
+export function makeHistory(current: number, trend: 'up' | 'down' | 'flat') {
   const base = current;
   const pts = [];
   for (let i = 29; i >= 0; i--) {
