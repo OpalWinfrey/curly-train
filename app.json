@@ -24,7 +24,8 @@
     "platforms": ["ios", "android", "web"],
     "web": {
       "bundler": "metro",
-      "output": "single-page-app"
+      "output": "single-page-app",
+      "favicon": "./assets/favicon.svg"
     },
     "plugins": [
       "expo-router"
