@@ -138,10 +138,10 @@ export function PlayBoosterDetail({ product }: Props) {
             <TopHitCard hits={product.playBoosterHits} totalCount={50} />
           )}
 
-          {(showOverview || showPrice) && (
+          {(showOverview || showPrice) && product.priceHistory.length > 0 && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory ?? []} />
+              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
             </View>
           )}
 

@@ -41,16 +41,27 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   const loadProducts = useCallback(async () => {
     setProductsLoading(true);
     try {
-      // Scryfall is always public — build the full catalog from it first
-      const scryfallSets = await fetchScryfallSets();
-      const scryfallCatalog = buildCatalogFromScryfall(scryfallSets);
+      // Fetch Scryfall sets and Manapool prices in parallel
+      const [scryfallSets, manapoolListings] = await Promise.allSettled([
+        fetchScryfallSets(),
+        fetchSealedPrices(),
+      ]);
+
+      if (scryfallSets.status === 'rejected') throw scryfallSets.reason;
+      const sets = scryfallSets.value;
+      const scryfallCatalog = buildCatalogFromScryfall(sets);
 
       // Try Manapool price enrichment (may 403 — that's OK)
-      const priceMap = new Map<string, number>();
+      const priceById = new Map<string, number>();
+      const priceByTypeKey = new Map<string, number>();
       try {
-        const listings = await fetchSealedPrices();
-        const priced = buildProductCatalog(listings, scryfallSets);
-        for (const p of priced) priceMap.set(p.id, p.currentMarketPrice);
+        if (manapoolListings.status === 'rejected') throw manapoolListings.reason;
+        const priced = buildProductCatalog(manapoolListings.value, sets);
+        for (const p of priced) {
+          priceById.set(p.id, p.currentMarketPrice);
+          // fallback key for when Manapool name doesn't exactly match Scryfall name+suffix
+          priceByTypeKey.set(`${p.setCode.toLowerCase()}-${p.productType}`, p.currentMarketPrice);
+        }
       } catch (err) {
         console.warn('[VaultMark] Manapool price fetch failed, products will show Price N/A:', err);
       }
@@ -61,7 +72,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
       const extra = scryfallCatalog
         .filter(p => !staticKeys.has(`${p.setCode}-${p.productType}`))
         .map(p => {
-          const price = priceMap.get(p.id);
+          const price = priceById.get(p.id) ?? priceByTypeKey.get(`${p.setCode.toLowerCase()}-${p.productType}`);
           return price != null && price > 0 ? { ...p, currentMarketPrice: price } : p;
         });
 

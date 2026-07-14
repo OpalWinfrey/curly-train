@@ -16,6 +16,10 @@ import type { Condition, CollectionItem, Product } from '../data/types';
 
 type SortKey = 'value' | 'pnl' | 'name' | 'date';
 
+function calcPnlPct(marketPrice: number, purchasePrice: number): number {
+  return purchasePrice > 0 ? ((marketPrice - purchasePrice) / purchasePrice) * 100 : 0;
+}
+
 export default function CollectionScreen() {
   const router = useRouter();
   const { products, collection, removeFromCollection, updateCollectionItem } = useUserState();
@@ -43,17 +47,15 @@ export default function CollectionScreen() {
   const totalPnl = totalValue - totalInvested;
   const pnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
 
-  const best = [...enriched].sort((a, b) => {
-    const aPnlPct = a.item.purchasePrice > 0 ? ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100 : 0;
-    const bPnlPct = b.item.purchasePrice > 0 ? ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100 : 0;
-    return bPnlPct - aPnlPct;
-  })[0];
+  const best = [...enriched].sort((a, b) =>
+    calcPnlPct(b.product.currentMarketPrice, b.item.purchasePrice) -
+    calcPnlPct(a.product.currentMarketPrice, a.item.purchasePrice)
+  )[0];
 
-  const worst = [...enriched].sort((a, b) => {
-    const aPnlPct = a.item.purchasePrice > 0 ? ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100 : 0;
-    const bPnlPct = b.item.purchasePrice > 0 ? ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100 : 0;
-    return aPnlPct - bPnlPct;
-  })[0];
+  const worst = [...enriched].sort((a, b) =>
+    calcPnlPct(a.product.currentMarketPrice, a.item.purchasePrice) -
+    calcPnlPct(b.product.currentMarketPrice, b.item.purchasePrice)
+  )[0];
 
   function handleUpdateItem(qty: number, price: number, date: string, condition: Condition, notes: string) {
     if (!editItem) return;
@@ -133,7 +135,7 @@ export default function CollectionScreen() {
                     <Text style={[styles.performerBadge, { color: accent }]}>{label}</Text>
                     <Text style={styles.performerName} numberOfLines={1}>{product.name}</Text>
                     <Text style={[styles.performerPct, { color: accent }]}>
-                      {(() => { const p = item.purchasePrice > 0 ? ((product.currentMarketPrice - item.purchasePrice) / item.purchasePrice) * 100 : 0; return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`; })()}
+                      {(() => { const p = calcPnlPct(product.currentMarketPrice, item.purchasePrice); return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`; })()}
                     </Text>
                   </View>
                 ) : null)}

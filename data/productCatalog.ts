@@ -50,7 +50,7 @@ export function buildCatalogFromScryfall(
         currentMarketPrice: 0,
         priceChangeWeek: 0,
         priceChangePct: 0,
-        priceHistory: makeHistory(100, 'flat'),
+        priceHistory: [],
       });
     }
   }
