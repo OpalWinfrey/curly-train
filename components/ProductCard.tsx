@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radius, Spacing } from './tokens';
 import type { Product } from '../data/types';
-import { scryfallSetIcon } from '../data/scryfall';
+import { scryfallCardArt } from '../data/scryfall';
 
 const TYPE_LABELS: Record<string, string> = {
   'play-booster-box':      'Play Booster Box',
@@ -34,31 +34,30 @@ interface Props {
   compact?: boolean;
 }
 
-function SetIcon({ setCode, size }: { setCode: string; size: number }) {
-  const [error, setError] = useState(false);
-  if (error) return null;
-  return (
-    <Image
-      source={{ uri: scryfallSetIcon(setCode) }}
-      style={{ width: size, height: size }}
-      onError={() => setError(true)}
-    />
-  );
-}
 
 export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOwned, compact }: Props) {
   const gradColors = TYPE_COLORS[product.productType] ?? ['#1a1a3a', '#060610'];
   const priceChange = product.priceChangePct;
   const changePositive = priceChange >= 0;
-  const iconSize = compact ? 32 : 40;
+  const [artError, setArtError] = useState(false);
+  const firstHit = product.playBoosterHits?.[0] ?? product.collectorBoosterHits?.[0];
+  const artUrl = firstHit ? scryfallCardArt(firstHit.name) : null;
 
   return (
     <Pressable onPress={onPress} style={[styles.card, compact && styles.compact]}>
-      {/* Art thumbnail with set icon */}
-      <LinearGradient colors={gradColors} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={[styles.thumb, compact && styles.thumbCompact]}>
-        <SetIcon setCode={product.setCode} size={iconSize} />
+      {/* Art thumbnail */}
+      <View style={[styles.thumb, compact && styles.thumbCompact]}>
+        <LinearGradient colors={gradColors} start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }} style={StyleSheet.absoluteFill} />
+        {artUrl && !artError && (
+          <Image
+            source={{ uri: artUrl }}
+            style={[StyleSheet.absoluteFill, { opacity: 0.65 }]}
+            resizeMode="cover"
+            onError={() => setArtError(true)}
+          />
+        )}
         {isOwned && <View style={styles.ownedDot} />}
-      </LinearGradient>
+      </View>
 
       {/* Info */}
       <View style={styles.info}>

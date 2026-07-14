@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
-  Pressable, StatusBar,
+  Pressable, StatusBar, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -12,9 +12,48 @@ import { SectionHeader } from '../components/SectionHeader';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { PRODUCTS } from '../data/products';
 import { useUserState } from '../data/userState';
+import { scryfallCardArt } from '../data/scryfall';
+import type { Product } from '../data/types';
 
 const FEATURED_ID = 'tdm-play-booster-box';
 const NEW_RELEASES = ['fft-play-booster-box', 'fft-collector-booster-box', 'tdm-play-booster-box'];
+
+function ReleaseCard({ product, onPress }: { product: Product; onPress: () => void }) {
+  const [imgError, setImgError] = useState(false);
+  const gradColors: [string, string] = product.productType === 'secret-lair'
+    ? ['#4a1a80', '#1a0535']
+    : product.productType === 'collector-booster-box'
+    ? ['#3a1a6a', '#0d061a']
+    : ['#1a3a6a', '#060d1a'];
+  const firstHit = product.playBoosterHits?.[0] ?? product.collectorBoosterHits?.[0];
+  const artUrl = firstHit ? scryfallCardArt(firstHit.name) : null;
+
+  return (
+    <Pressable onPress={onPress} style={styles.releaseCard}>
+      <View style={styles.releaseArtWrap}>
+        <LinearGradient colors={gradColors} style={StyleSheet.absoluteFill} />
+        {artUrl && !imgError && (
+          <Image
+            source={{ uri: artUrl }}
+            style={[StyleSheet.absoluteFill, { opacity: 0.7 }]}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
+        )}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}
+        >
+          <Text style={styles.releaseCode}>{product.setCode}</Text>
+        </LinearGradient>
+      </View>
+      <View style={styles.releaseInfo}>
+        <Text style={styles.releaseName} numberOfLines={2}>{product.name}</Text>
+        <Text style={styles.releasePrice}>${product.currentMarketPrice.toFixed(2)}</Text>
+      </View>
+    </Pressable>
+  );
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -150,18 +189,7 @@ export default function HomeScreen() {
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
             {newReleaseProducts.map(product => (
-              <Pressable key={product.id} onPress={() => router.push(`/product/${product.id}`)} style={styles.releaseCard}>
-                <LinearGradient
-                  colors={product.productType === 'secret-lair' ? ['#4a1a80', '#1a0535'] : product.productType === 'collector-booster-box' ? ['#3a1a6a', '#0d061a'] : ['#1a3a6a', '#060d1a']}
-                  style={styles.releaseArt}
-                >
-                  <Text style={styles.releaseCode}>{product.setCode}</Text>
-                </LinearGradient>
-                <View style={styles.releaseInfo}>
-                  <Text style={styles.releaseName} numberOfLines={2}>{product.name}</Text>
-                  <Text style={styles.releasePrice}>${product.currentMarketPrice.toFixed(2)}</Text>
-                </View>
-              </Pressable>
+              <ReleaseCard key={product.id} product={product} onPress={() => router.push(`/product/${product.id}`)} />
             ))}
           </ScrollView>
         </View>
@@ -267,8 +295,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: 'hidden',
   },
-  releaseArt: { height: 90, alignItems: 'center', justifyContent: 'center' },
-  releaseCode: { fontSize: 16, fontWeight: '900', color: 'rgba(255,255,255,0.7)', letterSpacing: 1 },
+  releaseArtWrap: { height: 100, overflow: 'hidden' },
+  releaseCode: { fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.6)', letterSpacing: 1.5 },
   releaseInfo: { padding: Spacing.md, gap: 4 },
   releaseName: { fontSize: 12, fontWeight: '700', color: Colors.text1, lineHeight: 16 },
   releasePrice: { fontSize: 13, fontWeight: '800', color: Colors.accent, fontVariant: ['tabular-nums'] },
