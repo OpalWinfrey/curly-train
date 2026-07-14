@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SvgUri } from 'react-native-svg';
 import { Colors, Radius, Spacing } from './tokens';
 import type { Product } from '../data/types';
 import { scryfallSetIcon } from '../data/scryfall';
@@ -39,10 +38,9 @@ function SetIcon({ setCode, size }: { setCode: string; size: number }) {
   const [error, setError] = useState(false);
   if (error) return null;
   return (
-    <SvgUri
-      width={size}
-      height={size}
-      uri={scryfallSetIcon(setCode)}
+    <Image
+      source={{ uri: scryfallSetIcon(setCode) }}
+      style={{ width: size, height: size }}
       onError={() => setError(true)}
     />
   );

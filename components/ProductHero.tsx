@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SvgUri } from 'react-native-svg';
 import { Colors, Radius, Spacing } from './tokens';
 import { scryfallSetIcon } from '../data/scryfall';
 
@@ -28,7 +27,11 @@ function SetIconOverlay({ setCode }: { setCode: string }) {
   if (error) return null;
   return (
     <View style={styles.setIconWrap}>
-      <SvgUri width={28} height={28} uri={scryfallSetIcon(setCode)} onError={() => setError(true)} />
+      <Image
+        source={{ uri: scryfallSetIcon(setCode) }}
+        style={{ width: 28, height: 28 }}
+        onError={() => setError(true)}
+      />
     </View>
   );
 }
