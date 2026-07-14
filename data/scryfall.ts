@@ -11,3 +11,19 @@ export function scryfallCardArt(name: string): string {
 export function scryfallSetIcon(setCode: string): string {
   return `https://svgs.scryfall.io/sets/${setCode.toLowerCase()}.svg`;
 }
+
+export interface ScryfallSetMeta {
+  name: string;
+  released_at: string;
+}
+
+export async function fetchScryfallSets(): Promise<Record<string, ScryfallSetMeta>> {
+  const res = await fetch('https://api.scryfall.com/sets');
+  if (!res.ok) throw new Error(`Scryfall sets error: ${res.status}`);
+  const data = await res.json();
+  const map: Record<string, ScryfallSetMeta> = {};
+  for (const set of data.data as { code: string; name: string; released_at: string }[]) {
+    map[set.code.toUpperCase()] = { name: set.name, released_at: set.released_at };
+  }
+  return map;
+}

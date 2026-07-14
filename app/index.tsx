@@ -10,18 +10,14 @@ import { SearchBar } from '../components/SearchBar';
 import { ProductCard } from '../components/ProductCard';
 import { SectionHeader } from '../components/SectionHeader';
 import { Colors, Spacing, Radius } from '../components/tokens';
-import { PRODUCTS } from '../data/products';
 import { useUserState } from '../data/userState';
-
-const FEATURED_ID = 'tdm-play-booster-box';
-const NEW_RELEASES = ['fft-play-booster-box', 'fft-collector-booster-box', 'tdm-play-booster-box'];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { collection, watchlist, recentlyViewed, isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
+  const { products, collection, watchlist, recentlyViewed, isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
 
   const totalValue = collection.reduce((sum, item) => {
-    const product = PRODUCTS.find(p => p.id === item.productId);
+    const product = products.find(p => p.id === item.productId);
     return sum + (product ? product.currentMarketPrice * item.quantity : 0);
   }, 0);
 
@@ -30,25 +26,28 @@ export default function HomeScreen() {
   const hasCollection = collection.length > 0;
 
   const recentProducts = recentlyViewed
-    .map(id => PRODUCTS.find(p => p.id === id))
-    .filter(Boolean) as typeof PRODUCTS;
+    .map(id => products.find(p => p.id === id))
+    .filter(Boolean) as typeof products;
 
-  const newReleaseProducts = NEW_RELEASES
-    .map(id => PRODUCTS.find(p => p.id === id))
-    .filter(Boolean) as typeof PRODUCTS;
+  const newReleaseProducts = [...products]
+    .filter(p => p.releaseDate)
+    .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate))
+    .slice(0, 3);
 
-  const featuredProduct = PRODUCTS.find(p => p.id === FEATURED_ID);
+  const featuredProduct = [...products]
+    .filter(p => p.productType === 'play-booster-box')
+    .sort((a, b) => b.currentMarketPrice - a.currentMarketPrice)[0];
 
   const watchlistProducts = watchlist
-    .map(w => PRODUCTS.find(p => p.id === w.productId))
-    .filter(Boolean) as typeof PRODUCTS;
+    .map(w => products.find(p => p.id === w.productId))
+    .filter(Boolean) as typeof products;
 
   function toggleWatchlist(productId: string) {
     const wItem = getWatchlistItem(productId);
     if (wItem) {
       removeFromWatchlist(wItem.id);
     } else {
-      const product = PRODUCTS.find(p => p.id === productId);
+      const product = products.find(p => p.id === productId);
       if (product) {
         addToWatchlist({ productId, targetPrice: product.currentMarketPrice, dateAdded: new Date().toISOString().split('T')[0] });
       }
