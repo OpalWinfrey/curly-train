@@ -20,6 +20,7 @@ export interface CardHit {
 interface Props {
   hit: CardHit;
   isLast?: boolean;
+  packsTotal?: number; // total packs being opened — drives pull rate vs expected-copies display
 }
 
 const RARITY_STYLES: Record<string, { bg: [string, string]; text: string }> = {
@@ -29,9 +30,14 @@ const RARITY_STYLES: Record<string, { bg: [string, string]; text: string }> = {
   C: { bg: ['#374151', '#6B7280'], text: '#D1D5DB' },
 };
 
-export function CardRow({ hit, isLast }: Props) {
+export function CardRow({ hit, isLast, packsTotal = 36 }: Props) {
   const rar = RARITY_STYLES[hit.rarity] ?? RARITY_STYLES.C;
   const [imgError, setImgError] = useState(false);
+
+  // For cases (>36 packs) show expected copies; for single boxes show "1 in X"
+  const isMultiBox = packsTotal > 36;
+  const pullRateNum = parseFloat(hit.pullRate) || 0;
+  const expectedCopies = pullRateNum > 0 ? packsTotal / pullRateNum : 0;
 
   return (
     <View style={[styles.row, !isLast && styles.rowBorder]}>
@@ -63,10 +69,19 @@ export function CardRow({ hit, isLast }: Props) {
       {/* Price */}
       <Text style={styles.price}>{hit.price}</Text>
 
-      {/* Pull rate */}
+      {/* Pull rate — "1 in X" for single box, "~X.XX/case" for cases */}
       <View style={styles.pullCol}>
-        <Text style={styles.pullRate}>1 in {hit.pullRate}</Text>
-        <Text style={styles.pullPct}>({hit.pullPct})</Text>
+        {isMultiBox ? (
+          <>
+            <Text style={styles.pullRate}>~{expectedCopies.toFixed(2)}</Text>
+            <Text style={styles.pullPct}>per case</Text>
+          </>
+        ) : (
+          <>
+            <Text style={styles.pullRate}>1 in {hit.pullRate}</Text>
+            <Text style={styles.pullPct}>({hit.pullPct})</Text>
+          </>
+        )}
       </View>
 
       {/* EV */}

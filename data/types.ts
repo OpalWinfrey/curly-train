@@ -1,6 +1,8 @@
 export type ProductType =
   | 'play-booster-box'
+  | 'play-booster-case'
   | 'collector-booster-box'
+  | 'collector-booster-case'
   | 'draft-booster-box'
   | 'set-booster-box'
   | 'bundle'

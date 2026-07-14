@@ -7,16 +7,21 @@ import { SectionHeader } from './SectionHeader';
 interface Props {
   hits: CardHit[];
   totalCount: number;
+  packsTotal?: number; // 36 = single box (default), 216 = case of 6, 10 = bundle
+  label?: string;
   onViewAll?: () => void;
 }
 
-export function TopHitCard({ hits, totalCount, onViewAll }: Props) {
+export function TopHitCard({ hits, totalCount, packsTotal = 36, label = 'Play Booster Hits', onViewAll }: Props) {
+  const isMultiBox = packsTotal > 36;
+  const pullColLabel = isMultiBox ? 'Expected/Case' : 'Pull Rate';
+
   return (
     <View>
       <View style={{ marginBottom: 10 }}>
         <SectionHeader
           eyebrow="By EV Contribution"
-          title="Top Play Booster Hits"
+          title={`Top ${label}`}
           action={`View All (${totalCount})`}
           onAction={onViewAll}
         />
@@ -28,7 +33,7 @@ export function TopHitCard({ hits, totalCount, onViewAll }: Props) {
           <Text style={[styles.colLabel, { flex: 1 }]}>Card</Text>
           <Text style={[styles.colLabel, { width: 18 }]}></Text>
           <Text style={[styles.colLabel, { width: 48, textAlign: 'right' }]}>Avg Price</Text>
-          <Text style={[styles.colLabel, { width: 58, textAlign: 'right' }]}>Pull Rate</Text>
+          <Text style={[styles.colLabel, { width: 58, textAlign: 'right' }]}>{pullColLabel}</Text>
           <Text style={[styles.colLabel, { width: 40, textAlign: 'right' }]}>EV</Text>
         </View>
         <View style={styles.sortRow}>
@@ -37,12 +42,12 @@ export function TopHitCard({ hits, totalCount, onViewAll }: Props) {
         </View>
 
         {hits.map((hit, i) => (
-          <CardRow key={hit.name} hit={hit} isLast={i === hits.length - 1} />
+          <CardRow key={hit.name} hit={hit} isLast={i === hits.length - 1} packsTotal={packsTotal} />
         ))}
       </View>
 
       <Pressable onPress={onViewAll} style={styles.viewAllBtn}>
-        <Text style={styles.viewAllText}>View All Play Booster Hits</Text>
+        <Text style={styles.viewAllText}>View All {label}</Text>
       </Pressable>
     </View>
   );

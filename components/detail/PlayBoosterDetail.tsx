@@ -34,11 +34,18 @@ export function PlayBoosterDetail({ product }: Props) {
 
   const inCollection = isInCollection(product.id);
   const inWatchlist = isInWatchlist(product.id);
+  const isCase = product.productType === 'play-booster-case';
+  const CASE_MULTIPLIER = isCase ? 6 : 1;
   const { loading: evLoading, evData } = useSetEV(product.setCode);
 
   // Prefer live Scryfall-computed data; fall back to static data in products.ts
-  const liveEV = evData?.expectedValue ?? product.expectedValue;
-  const liveSegments = evData?.evSegments ?? product.evSegments;
+  const boxEV = evData?.expectedValue ?? product.expectedValue ?? 0;
+  const liveEV = boxEV * CASE_MULTIPLIER;
+  const liveSegments = (evData?.evSegments ?? product.evSegments)?.map(s =>
+    isCase
+      ? { ...s, amount: `$${(parseFloat(s.amount.replace('$', '')) * 6).toFixed(2)}` }
+      : s,
+  );
   const liveHits = evData?.topHits ?? product.playBoosterHits;
   const isLive = !!evData;
 
@@ -91,12 +98,12 @@ export function PlayBoosterDetail({ product }: Props) {
           setCode={product.setCode}
           year={product.releaseDate.split('-')[0]}
           title={title}
-          subtitle="Play Booster Box"
+          subtitle={isCase ? 'Play Booster Case (6 Boxes)' : 'Play Booster Box'}
           releaseDate={`Released ${new Date(product.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
           heroImageUrl={heroImageUrl}
           metrics={[
             { label: 'Market Price', value: `$${product.currentMarketPrice.toFixed(2)}`, sub: `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` },
-            { label: 'Expected EV', value: evLoading ? '…' : `$${(liveEV ?? 0).toFixed(2)}`, sub: evLoading ? 'Loading…' : `${(((liveEV ?? 0) / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
+            { label: isCase ? 'Case EV' : 'Expected EV', value: evLoading ? '…' : `$${liveEV.toFixed(2)}`, sub: evLoading ? 'Loading…' : `${((liveEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
             { label: 'Investment Score', value: String(product.investmentScore ?? 0), sub: product.investmentScore! >= 80 ? 'EXCELLENT' : product.investmentScore! >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: product.investmentScore ?? 0 },
           ]}
         />
@@ -115,21 +122,39 @@ export function PlayBoosterDetail({ product }: Props) {
         <View style={styles.content}>
           {(showOverview || showEV) && product.packContents && (
             <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="Product Details" title="Box Overview" /></View>
+              <View style={styles.sectionHead}>
+                <SectionHeader eyebrow="Product Details" title={isCase ? 'Case Overview' : 'Box Overview'} />
+              </View>
               <View style={styles.card}>
-                <Text style={styles.boxDesc}>{product.packContents.description ?? `Each Play Booster Box contains ${product.packContents.packsPerBox} Play Boosters. Each Play Booster includes ${product.packContents.cardsPerPack} Magic cards.`}</Text>
+                <Text style={styles.boxDesc}>
+                  {isCase
+                    ? `Each Play Booster Case contains 6 Play Booster Boxes (${product.packContents.packsPerBox * 6} packs total). Each Play Booster includes ${product.packContents.cardsPerPack} Magic cards.`
+                    : (product.packContents.description ?? `Each Play Booster Box contains ${product.packContents.packsPerBox} Play Boosters. Each Play Booster includes ${product.packContents.cardsPerPack} Magic cards.`)}
+                </Text>
                 <View style={styles.boxStats}>
-                  {[
-                    { val: String(product.packContents.packsPerBox), lbl: 'Packs\nper Box' },
-                    { val: String(product.packContents.cardsPerPack), lbl: 'Cards\nper Pack' },
-                    { val: product.packContents.raresPerPack, lbl: 'Rares or higher\nper Pack' },
-                    { val: product.packContents.foilRate, lbl: 'Foil in\nof Packs' },
-                  ].map((s, i, arr) => (
-                    <View key={s.lbl} style={[styles.bsCell, i < arr.length - 1 && styles.bsCellBorder]}>
-                      <Text style={styles.bsVal}>{s.val}</Text>
-                      <Text style={styles.bsLbl}>{s.lbl}</Text>
-                    </View>
-                  ))}
+                  {isCase
+                    ? [
+                        { val: '6', lbl: 'Boxes\nper Case' },
+                        { val: String(product.packContents.packsPerBox * 6), lbl: 'Total\nPacks' },
+                        { val: product.packContents.raresPerPack, lbl: 'Rares or higher\nper Pack' },
+                        { val: product.packContents.foilRate, lbl: 'Foil in\nof Packs' },
+                      ].map((s, i, arr) => (
+                        <View key={s.lbl} style={[styles.bsCell, i < arr.length - 1 && styles.bsCellBorder]}>
+                          <Text style={styles.bsVal}>{s.val}</Text>
+                          <Text style={styles.bsLbl}>{s.lbl}</Text>
+                        </View>
+                      ))
+                    : [
+                        { val: String(product.packContents.packsPerBox), lbl: 'Packs\nper Box' },
+                        { val: String(product.packContents.cardsPerPack), lbl: 'Cards\nper Pack' },
+                        { val: product.packContents.raresPerPack, lbl: 'Rares or higher\nper Pack' },
+                        { val: product.packContents.foilRate, lbl: 'Foil in\nof Packs' },
+                      ].map((s, i, arr) => (
+                        <View key={s.lbl} style={[styles.bsCell, i < arr.length - 1 && styles.bsCellBorder]}>
+                          <Text style={styles.bsVal}>{s.val}</Text>
+                          <Text style={styles.bsLbl}>{s.lbl}</Text>
+                        </View>
+                      ))}
                 </View>
               </View>
             </View>
@@ -138,7 +163,7 @@ export function PlayBoosterDetail({ product }: Props) {
           {(showOverview || showEV) && (liveSegments || evLoading) && (
             <View>
               <View style={styles.sectionHead}>
-                <SectionHeader eyebrow="Per Box Opening" title="Expected Value Breakdown" />
+                <SectionHeader eyebrow={isCase ? 'Per Case Opening (6 Boxes)' : 'Per Box Opening'} title="Expected Value Breakdown" />
                 {isLive && <Text style={styles.liveBadge}>LIVE</Text>}
               </View>
               {evLoading && !liveSegments
@@ -157,7 +182,14 @@ export function PlayBoosterDetail({ product }: Props) {
               )}
               {evLoading && !liveHits
                 ? <View style={styles.loadingBox}><Text style={styles.loadingText}>Fetching booster hit data…</Text></View>
-                : liveHits && <TopHitCard hits={liveHits} totalCount={liveHits.length} />}
+                : liveHits && (
+                  <TopHitCard
+                    hits={liveHits}
+                    totalCount={liveHits.length}
+                    packsTotal={isCase ? (product.packContents?.packsPerBox ?? 36) * 6 : (product.packContents?.packsPerBox ?? 36)}
+                    label={isCase ? 'Play Booster Case Hits' : 'Play Booster Hits'}
+                  />
+                )}
             </View>
           )}
 

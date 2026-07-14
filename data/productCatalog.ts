@@ -58,8 +58,12 @@ export function buildCatalogFromScryfall(
 }
 
 export function inferProductType(name: string): ProductType | null {
-  // Exclude multi-box cases and displays (e.g. "Booster Box Display", "6-Box Case")
-  if (/display|case|\b6[ -]?box/i.test(name)) return null;
+  const isCase = /display|case|\b6[ -]?box/i.test(name);
+
+  if (isCase) {
+    if (/collector/i.test(name)) return 'collector-booster-case';
+    return 'play-booster-case';
+  }
 
   if (name.includes('Collector Booster Box')) return 'collector-booster-box';
   if (name.includes('Set Booster Box')) return 'set-booster-box';

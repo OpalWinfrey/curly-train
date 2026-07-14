@@ -33,7 +33,15 @@ export function CollectorBoosterDetail({ product }: Props) {
 
   const inCollection = isInCollection(product.id);
   const inWatchlist = isInWatchlist(product.id);
+  const isCase = product.productType === 'collector-booster-case';
+  const CASE_MULTIPLIER = isCase ? 6 : 1;
   const meta = product.collectorMetadata;
+  const displayEV = (product.expectedValue ?? 0) * CASE_MULTIPLIER;
+  const displaySegments = product.evSegments?.map(s =>
+    isCase
+      ? { ...s, amount: `$${(parseFloat(s.amount.replace('$', '')) * 6).toFixed(2)}` }
+      : s,
+  );
   const changeSign = product.priceChangeWeek >= 0 ? '+' : '';
   const weekChange = `${changeSign}$${Math.abs(product.priceChangeWeek).toFixed(2)} · ${changeSign}${product.priceChangePct.toFixed(2)}%`;
 
@@ -83,12 +91,12 @@ export function CollectorBoosterDetail({ product }: Props) {
           setCode={product.setCode}
           year={product.releaseDate.split('-')[0]}
           title={title}
-          subtitle="Collector Booster Box"
+          subtitle={isCase ? 'Collector Booster Case (6 Boxes)' : 'Collector Booster Box'}
           releaseDate={`Released ${new Date(product.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
           heroImageUrl={heroImageUrl}
           metrics={[
             { label: 'Market Price', value: `$${product.currentMarketPrice.toFixed(2)}`, sub: `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` },
-            { label: 'Expected EV', value: `$${(product.expectedValue ?? 0).toFixed(2)}`, sub: `${(((product.expectedValue ?? 0) / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
+            { label: isCase ? 'Case EV' : 'Expected EV', value: `$${displayEV.toFixed(2)}`, sub: `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
             { label: 'Investment Score', value: String(product.investmentScore ?? 0), sub: product.investmentScore! >= 80 ? 'EXCELLENT' : product.investmentScore! >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: product.investmentScore ?? 0 },
           ]}
         />
@@ -108,18 +116,30 @@ export function CollectorBoosterDetail({ product }: Props) {
           {/* Collector Box Overview */}
           {(showOverview || showEV) && meta && (
             <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="Product Details" title="Collector Box Contents" /></View>
+              <View style={styles.sectionHead}>
+                <SectionHeader eyebrow="Product Details" title={isCase ? 'Collector Case Contents' : 'Collector Box Contents'} />
+              </View>
               <View style={styles.card}>
                 <Text style={styles.boxDesc}>
-                  Each Collector Booster Box contains {meta.packsPerBox} Collector Boosters packed with premium treatments, foils, and exclusive alternate arts.
+                  {isCase
+                    ? `Each Collector Booster Case contains 6 Collector Booster Boxes (${meta.packsPerBox * 6} packs total) packed with premium treatments, foils, and exclusive alternate arts.`
+                    : `Each Collector Booster Box contains ${meta.packsPerBox} Collector Boosters packed with premium treatments, foils, and exclusive alternate arts.`}
                 </Text>
                 <View style={styles.boxStats}>
-                  {[
-                    { val: String(meta.packsPerBox), lbl: 'Packs\nper Box' },
-                    { val: meta.guaranteedFoils, lbl: 'Guaranteed\nFoils' },
-                    { val: meta.extendedArtSlots, lbl: 'Premium\nSlots / Pack' },
-                    { val: meta.serializedOdds ?? 'N/A', lbl: 'Serialized\nOdds' },
-                  ].map((s, i, arr) => (
+                  {(isCase
+                    ? [
+                        { val: '6', lbl: 'Boxes\nper Case' },
+                        { val: String(meta.packsPerBox * 6), lbl: 'Total\nPacks' },
+                        { val: meta.guaranteedFoils, lbl: 'Guaranteed\nFoils / Box' },
+                        { val: meta.serializedOdds ?? 'N/A', lbl: 'Serialized\nOdds' },
+                      ]
+                    : [
+                        { val: String(meta.packsPerBox), lbl: 'Packs\nper Box' },
+                        { val: meta.guaranteedFoils, lbl: 'Guaranteed\nFoils' },
+                        { val: meta.extendedArtSlots, lbl: 'Premium\nSlots / Pack' },
+                        { val: meta.serializedOdds ?? 'N/A', lbl: 'Serialized\nOdds' },
+                      ]
+                  ).map((s, i, arr) => (
                     <View key={s.lbl} style={[styles.bsCell, i < arr.length - 1 && styles.bsCellBorder]}>
                       <Text style={styles.bsVal} numberOfLines={2}>{s.val}</Text>
                       <Text style={styles.bsLbl}>{s.lbl}</Text>
@@ -141,16 +161,23 @@ export function CollectorBoosterDetail({ product }: Props) {
           )}
 
           {/* EV Breakdown */}
-          {(showOverview || showEV) && product.evSegments && (
+          {(showOverview || showEV) && (product.evSegments || displaySegments) && (
             <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="Per Box Opening" title="Premium Treatment Breakdown" /></View>
-              <ValueBreakdown totalEV={`$${(product.expectedValue ?? 0).toFixed(2)}`} segments={product.evSegments} />
+              <View style={styles.sectionHead}>
+                <SectionHeader eyebrow={isCase ? 'Per Case Opening (6 Boxes)' : 'Per Box Opening'} title="Premium Treatment Breakdown" />
+              </View>
+              <ValueBreakdown totalEV={`$${displayEV.toFixed(2)}`} segments={displaySegments ?? product.evSegments ?? []} />
             </View>
           )}
 
           {/* Collector Hits */}
           {(showOverview || showHits) && product.collectorBoosterHits && (
-            <TopHitCard hits={product.collectorBoosterHits} totalCount={36} />
+            <TopHitCard
+              hits={product.collectorBoosterHits}
+              totalCount={product.collectorBoosterHits.length}
+              packsTotal={isCase ? (meta?.packsPerBox ?? 12) * 6 : (meta?.packsPerBox ?? 12)}
+              label={isCase ? 'Collector Case Hits' : 'Collector Hits'}
+            />
           )}
 
           {/* Price History */}

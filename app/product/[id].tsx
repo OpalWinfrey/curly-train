@@ -33,11 +33,16 @@ export default function ProductDetailScreen() {
     );
   }
 
-  if (product.productType === 'play-booster-box' || product.productType === 'draft-booster-box' || product.productType === 'set-booster-box') {
+  if (
+    product.productType === 'play-booster-box' ||
+    product.productType === 'play-booster-case' ||
+    product.productType === 'draft-booster-box' ||
+    product.productType === 'set-booster-box'
+  ) {
     return <PlayBoosterDetail product={product} />;
   }
 
-  if (product.productType === 'collector-booster-box') {
+  if (product.productType === 'collector-booster-box' || product.productType === 'collector-booster-case') {
     return <CollectorBoosterDetail product={product} />;
   }
 
