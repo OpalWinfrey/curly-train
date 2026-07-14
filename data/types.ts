@@ -125,3 +125,11 @@ export interface WatchlistItem {
   dateAdded: string;
   notes?: string;
 }
+
+export interface LiveEVData {
+  expectedValue: number;
+  evSegments: Array<EVSegment & { colorKey: string }>;
+  topHits: CardHit[];
+  cardCounts: { mythics: number; rares: number; treatments: number; specialGuests: number };
+  lastUpdated: string;
+}

@@ -1,0 +1,247 @@
+// ── Scryfall card shape (only the fields we need) ──────────────────────────
+interface ScryfallCard {
+  name: string;
+  rarity: 'common' | 'uncommon' | 'rare' | 'mythic';
+  frame_effects?: string[];
+  promo_types?: string[];
+  prices: { usd?: string | null; usd_foil?: string | null };
+  image_uris?: { art_crop?: string };
+  card_faces?: Array<{ image_uris?: { art_crop?: string } }>;
+}
+
+interface ScryfallPage {
+  data: ScryfallCard[];
+  has_more: boolean;
+  next_page?: string;
+}
+
+// ── Play booster slot model (standard MTG expansion, 36 packs/box) ─────────
+const PACKS = 36;
+const MYTHIC_RATE = 1 / 8;          // 1 in 8 rare/mythic slots is a mythic
+const RARE_RATE = 7 / 8;
+const FOIL_PER_BOX = PACKS;         // 1 guaranteed foil per pack
+const FOIL_RARE_RATE = 0.085;       // ~8.5% of foil slot lands on a rare
+const FOIL_MYTHIC_RATE = 0.02;      // ~2% of foil slot lands on a mythic
+const TREATMENT_PER_BOX = PACKS / 7; // ~1 in 7 packs has a showcase/bonus slot
+const SPECIAL_GUEST_PER_BOX = PACKS / 45; // ~1 in 45 packs = special guest rare
+const BULK_EV_PER_BOX = 8.50;       // flat estimate for commons/uncommons
+
+// 8 deterministic color pairs for card art gradients (dark bg, accent)
+const ART_COLOR_PAIRS: [string, string][] = [
+  ['#1a3a6a', '#060d1a'],
+  ['#6a1a1a', '#1a0606'],
+  ['#1a4a1a', '#061006'],
+  ['#4a1a6a', '#0d0618'],
+  ['#4a3a10', '#120e03'],
+  ['#1a3a4a', '#060d12'],
+  ['#6a4a1a', '#1a1206'],
+  ['#3a1a4a', '#0a0612'],
+];
+
+function artColors(name: string): [string, string] {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return ART_COLOR_PAIRS[h % ART_COLOR_PAIRS.length];
+}
+
+function isTreatment(card: ScryfallCard): boolean {
+  const fe = card.frame_effects ?? [];
+  const pt = card.promo_types ?? [];
+  return (
+    fe.includes('showcase') ||
+    fe.includes('extendedart') ||
+    fe.includes('borderless') ||
+    pt.includes('boosterfun') ||
+    pt.includes('buyabox')
+  );
+}
+
+function isSpecialGuest(card: ScryfallCard): boolean {
+  return (card.promo_types ?? []).includes('specialguest');
+}
+
+function cardArt(card: ScryfallCard): string | undefined {
+  return card.image_uris?.art_crop ?? card.card_faces?.[0]?.image_uris?.art_crop;
+}
+
+function usd(s: string | null | undefined): number {
+  if (!s) return 0;
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+async function fetchAllCards(setCode: string): Promise<ScryfallCard[]> {
+  const cards: ScryfallCard[] = [];
+  let url: string | undefined =
+    `https://api.scryfall.com/cards/search?q=e%3A${encodeURIComponent(setCode)}+not%3Adigital&order=usd&dir=desc&unique=prints`;
+
+  while (url) {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'VaultMark/1.0', Accept: 'application/json' },
+    });
+    if (!res.ok) break;
+    const page: ScryfallPage = await res.json();
+    cards.push(...page.data);
+    url = page.has_more ? page.next_page : undefined;
+    if (url) await new Promise(r => setTimeout(r, 100)); // respect Scryfall rate limits
+  }
+  return cards;
+}
+
+export default async function handler(req: any, res: any) {
+  const setCode = (req.query.setCode as string | undefined)?.toUpperCase();
+  if (!setCode) {
+    res.status(400).json({ error: 'Missing setCode' });
+    return;
+  }
+
+  let cards: ScryfallCard[];
+  try {
+    cards = await fetchAllCards(setCode);
+  } catch {
+    res.status(502).json({ error: 'Scryfall fetch failed' });
+    return;
+  }
+
+  if (cards.length === 0) {
+    res.status(404).json({ error: 'No cards found for set' });
+    return;
+  }
+
+  // ── Bucket cards ───────────────────────────────────────────────────────────
+  const mythics: ScryfallCard[] = [];
+  const rares: ScryfallCard[] = [];
+  const treatments: ScryfallCard[] = [];
+  const specialGuests: ScryfallCard[] = [];
+
+  for (const card of cards) {
+    if (isSpecialGuest(card)) { specialGuests.push(card); continue; }
+    if (isTreatment(card)) { treatments.push(card); continue; }
+    if (card.rarity === 'mythic') mythics.push(card);
+    else if (card.rarity === 'rare') rares.push(card);
+  }
+
+  // ── Per-card EV helpers ────────────────────────────────────────────────────
+  function mythicEVContrib(card: ScryfallCard): number {
+    if (mythics.length === 0) return 0;
+    return (PACKS * MYTHIC_RATE / mythics.length) * usd(card.prices.usd);
+  }
+
+  function rareEVContrib(card: ScryfallCard): number {
+    if (rares.length === 0) return 0;
+    return (PACKS * RARE_RATE / rares.length) * usd(card.prices.usd);
+  }
+
+  function treatmentEVContrib(card: ScryfallCard): number {
+    if (treatments.length === 0) return 0;
+    return (TREATMENT_PER_BOX / treatments.length) * usd(card.prices.usd);
+  }
+
+  function specialGuestEVContrib(card: ScryfallCard): number {
+    if (specialGuests.length === 0) return 0;
+    return (SPECIAL_GUEST_PER_BOX / specialGuests.length) * usd(card.prices.usd);
+  }
+
+  // ── Segment EVs ───────────────────────────────────────────────────────────
+  const mythicEV = mythics.reduce((s, c) => s + mythicEVContrib(c), 0);
+  const rareEV = rares.reduce((s, c) => s + rareEVContrib(c), 0);
+  const treatmentEV = treatments.reduce((s, c) => s + treatmentEVContrib(c), 0);
+  const specialGuestEV = specialGuests.reduce((s, c) => s + specialGuestEVContrib(c), 0);
+
+  // Foil EV: use foil prices where available, fall back to non-foil
+  const allNonSpecial = [...mythics, ...rares];
+  const avgFoilRarePrice = avg(
+    rares.map(c => usd(c.prices.usd_foil) || usd(c.prices.usd) * 1.15),
+  );
+  const avgFoilMythicPrice = avg(
+    mythics.map(c => usd(c.prices.usd_foil) || usd(c.prices.usd) * 1.2),
+  );
+  const foilEV =
+    FOIL_PER_BOX * FOIL_RARE_RATE * avgFoilRarePrice +
+    FOIL_PER_BOX * FOIL_MYTHIC_RATE * avgFoilMythicPrice;
+
+  const totalEV = mythicEV + rareEV + foilEV + treatmentEV + specialGuestEV + BULK_EV_PER_BOX;
+
+  // ── evSegments (only include segments with >0 EV) ─────────────────────────
+  const rawSegments = [
+    { label: 'Mythics',        ev: mythicEV,       colorKey: 'mythics' },
+    { label: 'Rares',          ev: rareEV,         colorKey: 'rares' },
+    { label: 'Foils',          ev: foilEV,         colorKey: 'foils' },
+    { label: 'Showcase',       ev: treatmentEV,    colorKey: 'showcase' },
+    { label: 'Special Guests', ev: specialGuestEV, colorKey: 'specialGuests' },
+    { label: 'Bulk & Commons', ev: BULK_EV_PER_BOX, colorKey: 'bulk' },
+  ].filter(s => s.ev > 0.01);
+
+  const evSegments = rawSegments.map(s => ({
+    label: s.label,
+    percentage: totalEV > 0 ? parseFloat(((s.ev / totalEV) * 100).toFixed(1)) : 0,
+    amount: `$${s.ev.toFixed(2)}`,
+    colorKey: s.colorKey,
+  }));
+
+  // ── Top hits sorted by EV contribution ───────────────────────────────────
+  type HitInput = { card: ScryfallCard; evContrib: number; pullsPer36: number };
+  const hitPool: HitInput[] = [
+    ...mythics.map(c => ({
+      card: c,
+      evContrib: mythicEVContrib(c),
+      pullsPer36: mythics.length > 0 ? PACKS * MYTHIC_RATE / mythics.length : 0,
+    })),
+    ...rares.map(c => ({
+      card: c,
+      evContrib: rareEVContrib(c),
+      pullsPer36: rares.length > 0 ? PACKS * RARE_RATE / rares.length : 0,
+    })),
+    ...treatments.map(c => ({
+      card: c,
+      evContrib: treatmentEVContrib(c),
+      pullsPer36: treatments.length > 0 ? TREATMENT_PER_BOX / treatments.length : 0,
+    })),
+    ...specialGuests.map(c => ({
+      card: c,
+      evContrib: specialGuestEVContrib(c),
+      pullsPer36: specialGuests.length > 0 ? SPECIAL_GUEST_PER_BOX / specialGuests.length : 0,
+    })),
+  ]
+    .filter(h => usd(h.card.prices.usd) > 0.50)
+    .sort((a, b) => b.evContrib - a.evContrib)
+    .slice(0, 15);
+
+  const topHits = hitPool.map(({ card, evContrib, pullsPer36 }) => {
+    const price = usd(card.prices.usd);
+    const pullRatePerPack = pullsPer36 / PACKS;
+    const pullRateOneIn = pullRatePerPack > 0 ? Math.round(1 / pullRatePerPack) : 0;
+    const pullPct = pullRatePerPack > 0 ? (pullRatePerPack * 100).toFixed(2) : '0.00';
+    const rarity = card.rarity === 'mythic' ? 'M' : card.rarity === 'rare' ? 'R' : card.rarity === 'uncommon' ? 'U' : 'C';
+    return {
+      name: card.name,
+      rarity,
+      price: `$${price.toFixed(2)}`,
+      pullRate: String(pullRateOneIn),
+      pullPct: `${pullPct}%`,
+      evContribution: `$${evContrib.toFixed(2)}`,
+      artColors: artColors(card.name),
+      artInitial: card.name[0].toUpperCase(),
+      imageUri: cardArt(card),
+    };
+  });
+
+  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
+  res.status(200).json({
+    expectedValue: parseFloat(totalEV.toFixed(2)),
+    evSegments,
+    topHits,
+    cardCounts: {
+      mythics: mythics.length,
+      rares: rares.length,
+      treatments: treatments.length,
+      specialGuests: specialGuests.length,
+    },
+    lastUpdated: new Date().toISOString().split('T')[0],
+  });
+}
+
+function avg(nums: number[]): number {
+  if (nums.length === 0) return 0;
+  return nums.reduce((s, n) => s + n, 0) / nums.length;
+}
