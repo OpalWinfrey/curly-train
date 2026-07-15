@@ -1,6 +1,7 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Tabs, Redirect } from 'expo-router';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { AuthProvider, useAuth } from '../lib/authContext';
 import { UserStateProvider } from '../data/userState';
 import { Colors } from '../components/tokens';
 
@@ -35,24 +36,36 @@ const eb = StyleSheet.create({
   btnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 });
 
-function TabIcon({ icon, focused }: { icon: string; focused: boolean }): React.JSX.Element {
+function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
   return (
-    <View style={[iconStyles.wrap, focused && iconStyles.wrapActive]}>
-      <Text style={[iconStyles.icon, focused && iconStyles.iconActive]}>{icon}</Text>
+    <View style={[icon_s.wrap, focused && icon_s.wrapActive]}>
+      <Text style={[icon_s.icon, focused && icon_s.iconActive]}>{icon}</Text>
     </View>
   );
 }
-
-const iconStyles = StyleSheet.create({
+const icon_s = StyleSheet.create({
   wrap: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   wrapActive: { backgroundColor: 'rgba(139,92,246,0.15)' },
   icon: { fontSize: 18, color: Colors.text3 },
   iconActive: { color: Colors.accent },
 });
 
-export default function RootLayout() {
+function AppContent() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={Colors.accent} size="large" />
+      </View>
+    );
+  }
+
+  if (!session) {
+    return <Redirect href="/(auth)/sign-in" />;
+  }
+
   return (
-    <ErrorBoundary>
     <UserStateProvider>
       <Tabs
         screenOptions={{
@@ -67,59 +80,56 @@ export default function RootLayout() {
           },
           tabBarActiveTintColor: Colors.accent,
           tabBarInactiveTintColor: Colors.text3,
-          tabBarLabelStyle: {
-            fontSize: 10,
-            fontWeight: '600',
-            letterSpacing: 0.3,
-          },
+          tabBarLabelStyle: { fontSize: 10, fontWeight: '600', letterSpacing: 0.3 },
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ focused }: { focused: boolean }) => <TabIcon icon="⌂" focused={focused} />,
+            tabBarIcon: ({ focused }) => <TabIcon icon="⌂" focused={focused} />,
           }}
         />
         <Tabs.Screen
           name="discover"
           options={{
             title: 'Discover',
-            tabBarIcon: ({ focused }: { focused: boolean }) => <TabIcon icon="⌕" focused={focused} />,
+            tabBarIcon: ({ focused }) => <TabIcon icon="⌕" focused={focused} />,
           }}
         />
         <Tabs.Screen
-          name="collection"
+          name="vault"
           options={{
-            title: 'Collection',
-            tabBarIcon: ({ focused }: { focused: boolean }) => <TabIcon icon="◈" focused={focused} />,
+            title: 'My Vault',
+            tabBarIcon: ({ focused }) => <TabIcon icon="◈" focused={focused} />,
           }}
         />
         <Tabs.Screen
-          name="watchlist"
-          options={{
-            title: 'Watchlist',
-            tabBarIcon: ({ focused }: { focused: boolean }) => <TabIcon icon="◎" focused={focused} />,
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
+          name="profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ focused }: { focused: boolean }) => <TabIcon icon="◉" focused={focused} />,
+            tabBarIcon: ({ focused }) => <TabIcon icon="◉" focused={focused} />,
           }}
         />
-        {/* Hidden from tab bar */}
-        <Tabs.Screen
-          name="product/[id]"
-          options={{ href: null, tabBarStyle: { display: 'none' } }}
-        />
-        <Tabs.Screen
-          name="add-product"
-          options={{ href: null, tabBarStyle: { display: 'none' } }}
-        />
+        {/* Hidden routes */}
+        <Tabs.Screen name="(auth)" options={{ href: null }} />
+        <Tabs.Screen name="product/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="add-product" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        {/* Old routes hidden (kept as files until cleaned up) */}
+        <Tabs.Screen name="collection" options={{ href: null }} />
+        <Tabs.Screen name="watchlist" options={{ href: null }} />
+        <Tabs.Screen name="settings" options={{ href: null }} />
       </Tabs>
     </UserStateProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
