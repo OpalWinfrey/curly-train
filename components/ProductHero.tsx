@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radius, Spacing } from './tokens';
 import { scryfallSetIcon } from '../data/scryfall';
@@ -20,6 +20,10 @@ interface Props {
   releaseDate: string;
   metrics: MetricItem[];
   heroImageUrl?: string;
+  inCollection?: boolean;
+  inWatchlist?: boolean;
+  onCollect?: () => void;
+  onWatchlist?: () => void;
 }
 
 function SetIconOverlay({ setCode }: { setCode: string }) {
@@ -36,7 +40,7 @@ function SetIconOverlay({ setCode }: { setCode: string }) {
   );
 }
 
-export function ProductHero({ setCode, year, title, subtitle, releaseDate, metrics, heroImageUrl }: Props) {
+export function ProductHero({ setCode, year, title, subtitle, releaseDate, metrics, heroImageUrl, inCollection, inWatchlist, onCollect, onWatchlist }: Props) {
   const [imgError, setImgError] = useState(false);
   const titleLines = title.split('\n');
 
@@ -108,6 +112,23 @@ export function ProductHero({ setCode, year, title, subtitle, releaseDate, metri
           </View>
         </View>
       </View>
+
+      {(onCollect || onWatchlist) && (
+        <View style={styles.ctaRow}>
+          <Pressable
+            onPress={onCollect}
+            style={[styles.ctaBtn, styles.ctaPrimary, inCollection && styles.ctaOwned]}
+          >
+            <Text style={styles.ctaPrimaryText}>{inCollection ? '✓ In Collection' : '+ Collection'}</Text>
+          </Pressable>
+          <Pressable
+            onPress={onWatchlist}
+            style={[styles.ctaBtn, styles.ctaSecondary]}
+          >
+            <Text style={styles.ctaSecondaryText}>{inWatchlist ? '♥ Watching' : '♡ Watchlist'}</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -152,4 +173,12 @@ const styles = StyleSheet.create({
   metricLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', color: Colors.text3 },
   metricValue: { fontSize: 16, fontWeight: '800', color: Colors.text1, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   metricSub: { fontSize: 10, color: Colors.text3, fontWeight: '500' },
+
+  ctaRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
+  ctaBtn: { flex: 1, height: 42, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  ctaPrimary: { backgroundColor: Colors.accent },
+  ctaOwned: { backgroundColor: Colors.success },
+  ctaSecondary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  ctaPrimaryText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+  ctaSecondaryText: { fontSize: 13, fontWeight: '700', color: Colors.text2 },
 });

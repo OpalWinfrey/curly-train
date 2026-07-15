@@ -107,6 +107,10 @@ export function BundleDetail({ product }: Props) {
             { label: 'Expected EV', value: evLoading ? '…' : `$${bundleEV.toFixed(2)}`, sub: evLoading ? 'Loading…' : `${((bundleEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
             { label: 'Investment Score', value: String(computedScore), sub: computedScore >= 80 ? 'EXCELLENT' : computedScore >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: computedScore },
           ]}
+          inCollection={inCollection}
+          inWatchlist={inWatchlist}
+          onCollect={() => setShowCollectionModal(true)}
+          onWatchlist={() => setShowWatchlistModal(true)}
         />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll}>
@@ -217,21 +221,6 @@ export function BundleDetail({ product }: Props) {
             </View>
           )}
 
-          <View style={styles.ctaRow}>
-            <Pressable
-              onPress={() => setShowCollectionModal(true)}
-              style={[styles.ctaBtn, styles.ctaPrimary, inCollection && styles.ctaOwned]}
-            >
-              <Text style={styles.ctaPrimaryText}>{inCollection ? '✓ In Collection' : '+ Add to Collection'}</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setShowWatchlistModal(true)}
-              style={[styles.ctaBtn, styles.ctaSecondary]}
-            >
-              <Text style={styles.ctaSecondaryText}>{inWatchlist ? '♥ Watching' : '♡ Watchlist'}</Text>
-            </Pressable>
-          </View>
-
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
@@ -279,13 +268,6 @@ const styles = StyleSheet.create({
   bsCellBorder: { borderRightWidth: 1, borderRightColor: Colors.border2 },
   bsVal: { fontSize: 15, fontWeight: '800', color: Colors.text1, letterSpacing: -0.4, fontVariant: ['tabular-nums'], lineHeight: 18 },
   bsLbl: { fontSize: 9, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, color: Colors.text3, textAlign: 'center', marginTop: 3, lineHeight: 12 },
-  ctaRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
-  ctaBtn: { flex: 1, height: 48, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
-  ctaPrimary: { backgroundColor: Colors.accent },
-  ctaOwned: { backgroundColor: Colors.success },
-  ctaSecondary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
-  ctaPrimaryText: { fontSize: 14, fontWeight: '800', color: '#fff' },
-  ctaSecondaryText: { fontSize: 14, fontWeight: '700', color: Colors.text2 },
   liveBadge: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8, color: Colors.success, borderWidth: 1, borderColor: Colors.success, borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, alignSelf: 'flex-start' },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   liveDate: { fontSize: 10, color: Colors.text3 },
