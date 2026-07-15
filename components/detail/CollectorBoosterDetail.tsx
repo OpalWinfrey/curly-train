@@ -112,6 +112,10 @@ export function CollectorBoosterDetail({ product }: Props) {
             { label: isCase ? 'Case EV' : 'Expected EV', value: evLoading ? '…' : `$${displayEV.toFixed(2)}`, sub: evLoading ? 'Loading…' : product.currentMarketPrice > 0 ? `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` : '' },
             { label: 'Investment Score', value: String(computedScore), sub: computedScore >= 80 ? 'EXCELLENT' : computedScore >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: computedScore },
           ]}
+          inCollection={inCollection}
+          inWatchlist={inWatchlist}
+          onCollect={() => setShowCollectionModal(true)}
+          onWatchlist={() => setShowWatchlistModal(true)}
         />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll}>
@@ -126,6 +130,31 @@ export function CollectorBoosterDetail({ product }: Props) {
         </ScrollView>
 
         <View style={styles.content}>
+          {showOverview && (
+            <View>
+              <View style={styles.sectionHead}><SectionHeader eyebrow="Analysis" title="Recommendation & Score" /></View>
+              {isUnreleased ? (
+                <View style={styles.loadingBox}><Text style={styles.loadingText}>Full analysis available after release — check back soon.</Text></View>
+              ) : (
+                <View style={{ gap: Spacing.sm }}>
+                  <RecommendationCard
+                    signal={analysis?.recommendation ?? product.recommendation ?? 'HOLD'}
+                    rationale={analysis?.recommendationRationale ?? product.recommendationRationale ?? ''}
+                    confidence={analysis?.confidence ?? product.confidence ?? 60}
+                  />
+                  {computedBars && (
+                    <InvestmentScore
+                      score={computedScore}
+                      grade={computedScore >= 80 ? 'Excellent' : computedScore >= 65 ? 'Good' : 'Fair'}
+                      description="Based on EV ratio, set quality, chase card ceiling, and market timing."
+                      bars={computedBars}
+                    />
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Collector Box Overview */}
           {(showOverview || showEV) && meta && (
             <View>
@@ -216,48 +245,6 @@ export function CollectorBoosterDetail({ product }: Props) {
             </View>
           )}
 
-          {showOverview && computedBars && (
-            <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="Analysis" title="Investment Score" /></View>
-              <InvestmentScore
-                score={computedScore}
-                grade={computedScore >= 80 ? 'Excellent' : computedScore >= 65 ? 'Good' : 'Fair'}
-                description="Based on EV ratio, set quality, chase card ceiling, and market timing."
-                bars={computedBars}
-              />
-            </View>
-          )}
-
-          {showOverview && (
-            <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="Based on Current Pricing" title="Recommendation" /></View>
-              {isUnreleased ? (
-                <View style={styles.loadingBox}><Text style={styles.loadingText}>Full analysis available after release — check back soon.</Text></View>
-              ) : (
-                <RecommendationCard
-                  signal={analysis?.recommendation ?? product.recommendation ?? 'HOLD'}
-                  rationale={analysis?.recommendationRationale ?? product.recommendationRationale ?? ''}
-                  confidence={analysis?.confidence ?? product.confidence ?? 60}
-                />
-              )}
-            </View>
-          )}
-
-          <View style={styles.ctaRow}>
-            <Pressable
-              onPress={() => setShowCollectionModal(true)}
-              style={[styles.ctaBtn, styles.ctaPrimary, inCollection && styles.ctaOwned]}
-            >
-              <Text style={styles.ctaPrimaryText}>{inCollection ? '✓ In Collection' : '+ Add to Collection'}</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setShowWatchlistModal(true)}
-              style={[styles.ctaBtn, styles.ctaSecondary]}
-            >
-              <Text style={styles.ctaSecondaryText}>{inWatchlist ? '♥ Watching' : '♡ Watchlist'}</Text>
-            </Pressable>
-          </View>
-
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
@@ -315,13 +302,6 @@ const styles = StyleSheet.create({
   },
   riskTitle: { fontSize: 13, fontWeight: '800', color: Colors.warning },
   riskText: { fontSize: 12, color: Colors.text2, lineHeight: 18 },
-  ctaRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
-  ctaBtn: { flex: 1, height: 48, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
-  ctaPrimary: { backgroundColor: Colors.accent },
-  ctaOwned: { backgroundColor: Colors.success },
-  ctaSecondary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
-  ctaPrimaryText: { fontSize: 14, fontWeight: '800', color: '#fff' },
-  ctaSecondaryText: { fontSize: 14, fontWeight: '700', color: Colors.text2 },
   liveBadge: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8, color: Colors.success, borderWidth: 1, borderColor: Colors.success, borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, alignSelf: 'flex-start' },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   liveDate: { fontSize: 10, color: Colors.text3 },

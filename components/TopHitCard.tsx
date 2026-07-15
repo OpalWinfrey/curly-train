@@ -1,20 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Colors, Radius, Spacing } from './tokens';
 import { CardRow, CardHit } from './CardRow';
 import { SectionHeader } from './SectionHeader';
+
+const PREVIEW_COUNT = 5;
 
 interface Props {
   hits: CardHit[];
   totalCount: number;
   packsTotal?: number; // 36 = single box (default), 216 = case of 6, 10 = bundle
   label?: string;
-  onViewAll?: () => void;
 }
 
-export function TopHitCard({ hits, totalCount, packsTotal = 36, label = 'Play Booster Hits', onViewAll }: Props) {
+export function TopHitCard({ hits, totalCount, packsTotal = 36, label = 'Play Booster Hits' }: Props) {
+  const [showAll, setShowAll] = useState(false);
   const isMultiBox = packsTotal > 36;
   const pullColLabel = isMultiBox ? 'Expected/Case' : 'Pull Rate';
+  const displayedHits = showAll ? hits : hits.slice(0, PREVIEW_COUNT);
+  const hasMore = hits.length > PREVIEW_COUNT;
 
   return (
     <View>
@@ -22,8 +26,6 @@ export function TopHitCard({ hits, totalCount, packsTotal = 36, label = 'Play Bo
         <SectionHeader
           eyebrow="By EV Contribution"
           title={`Top ${label}`}
-          action={`View All (${totalCount})`}
-          onAction={onViewAll}
         />
       </View>
 
@@ -41,14 +43,18 @@ export function TopHitCard({ hits, totalCount, packsTotal = 36, label = 'Play Bo
           <Text style={styles.sortValue}>EV Contribution ↓</Text>
         </View>
 
-        {hits.map((hit, i) => (
-          <CardRow key={hit.name} hit={hit} isLast={i === hits.length - 1} packsTotal={packsTotal} />
+        {displayedHits.map((hit, i) => (
+          <CardRow key={hit.name} hit={hit} isLast={i === displayedHits.length - 1} packsTotal={packsTotal} />
         ))}
       </View>
 
-      <Pressable onPress={onViewAll} style={styles.viewAllBtn}>
-        <Text style={styles.viewAllText}>View All {label}</Text>
-      </Pressable>
+      {hasMore && (
+        <Pressable onPress={() => setShowAll(prev => !prev)} style={styles.viewAllBtn}>
+          <Text style={styles.viewAllText}>
+            {showAll ? `Show Less` : `View All ${totalCount} ${label}`}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
