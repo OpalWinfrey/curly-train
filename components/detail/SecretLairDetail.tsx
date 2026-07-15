@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
-  Pressable, StatusBar,
+  Pressable, StatusBar, Share,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -100,7 +100,7 @@ export function SecretLairDetail({ product }: Props) {
           <Pressable onPress={() => setShowWatchlistModal(true)} style={styles.navBtn} hitSlop={8}>
             <Text style={[styles.navBtnIcon, inWatchlist && { color: Colors.danger }]}>{inWatchlist ? '♥' : '♡'}</Text>
           </Pressable>
-          <Pressable style={styles.navBtn} hitSlop={8}><Text style={styles.navBtnIcon}>↑</Text></Pressable>
+          <Pressable style={styles.navBtn} hitSlop={8} onPress={() => Share.share({ message: `Check out ${product.setName} on VaultMark`, url: `https://vaultmark-sealed.vercel.app` })}><Text style={styles.navBtnIcon}>↑</Text></Pressable>
         </View>
       </View>
 
@@ -151,7 +151,7 @@ export function SecretLairDetail({ product }: Props) {
             <View style={styles.sectionHead}><SectionHeader eyebrow="Market Data" title="Value Summary" /></View>
             <View style={styles.metricGrid}>
               <MetricTile label="Original MSRP" value={`$${msrp.toFixed(2)}`} sub="Nonfoil" />
-              <MetricTile label="Current Sealed" value={`$${product.currentMarketPrice.toFixed(2)}`}
+              <MetricTile label="Current Sealed" value={product.currentMarketPrice > 0 ? `$${product.currentMarketPrice.toFixed(2)}` : 'N/A'}
                 accent={product.currentMarketPrice > msrp ? Colors.success : Colors.danger} />
             </View>
             <View style={[styles.metricGrid, { marginTop: Spacing.sm }]}>

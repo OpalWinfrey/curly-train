@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
-  Pressable, StatusBar,
+  Pressable, StatusBar, Share,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -82,7 +82,7 @@ export function CollectorBoosterDetail({ product }: Props) {
           <Pressable onPress={() => setShowWatchlistModal(true)} style={styles.navBtn} hitSlop={8}>
             <Text style={[styles.navBtnIcon, inWatchlist && { color: Colors.danger }]}>{inWatchlist ? '♥' : '♡'}</Text>
           </Pressable>
-          <Pressable style={styles.navBtn} hitSlop={8}><Text style={styles.navBtnIcon}>↑</Text></Pressable>
+          <Pressable style={styles.navBtn} hitSlop={8} onPress={() => Share.share({ message: `Check out ${product.setName} on VaultMark`, url: `https://vaultmark-sealed.vercel.app` })}><Text style={styles.navBtnIcon}>↑</Text></Pressable>
         </View>
       </View>
 
@@ -95,8 +95,8 @@ export function CollectorBoosterDetail({ product }: Props) {
           releaseDate={`Released ${new Date(product.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
           heroImageUrl={heroImageUrl}
           metrics={[
-            { label: 'Market Price', value: `$${product.currentMarketPrice.toFixed(2)}`, sub: `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` },
-            { label: isCase ? 'Case EV' : 'Expected EV', value: `$${displayEV.toFixed(2)}`, sub: `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
+            { label: 'Market Price', value: product.currentMarketPrice > 0 ? `$${product.currentMarketPrice.toFixed(2)}` : 'N/A', sub: product.currentMarketPrice > 0 ? `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` : 'No price data' },
+            { label: isCase ? 'Case EV' : 'Expected EV', value: `$${displayEV.toFixed(2)}`, sub: product.currentMarketPrice > 0 ? `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` : '' },
             { label: 'Investment Score', value: String(product.investmentScore ?? 0), sub: product.investmentScore! >= 80 ? 'EXCELLENT' : product.investmentScore! >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: product.investmentScore ?? 0 },
           ]}
         />
