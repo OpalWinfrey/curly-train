@@ -29,7 +29,9 @@ VaultMark (`curly-train`) is a **Magic: The Gathering sealed-product investment 
 
 ### Pricing API (live data)
 - `api/manapool-prices.ts` — Vercel serverless function that proxies `https://manapool.com/api/v1/prices/sealed` using the credentials from env vars. Caches for 5 minutes (`s-maxage=300`). Called as `/api/manapool-prices` from the client.
+- `api/set-ev.ts` — Vercel serverless function that fetches all cards in a set from Scryfall and computes live EV broken down by rarity/treatment (mythics, rares, foils, showcase, special guests, bulk). Accepts `?setCode=&productType=`. Called as `/api/set-ev` from the client.
 - `data/manapool.ts` — client-side fetch helper that calls `/api/manapool-prices` and returns `ManapoolSealedListing[]`
+- `data/useSetEV.ts` — React hook that calls `/api/set-ev` and returns `{ loading, evData }`. Caches results in memory per set+productType so repeated renders don't re-fetch. Used by PlayBoosterDetail and CollectorBoosterDetail to show live EV data, falling back to static data in `products.ts` if the API fails.
 
 ### Product catalog (Scryfall + Manapool)
 - `data/scryfall.ts` — fetches set list from Scryfall API, generates `Product` objects for each set (one play booster box, one collector booster box, one commander deck, one bundle per set where applicable). Also provides `useProductArt()` which fetches the priciest card in a set as the product thumbnail.
@@ -53,7 +55,7 @@ Open issues are tracked at `https://github.com/OpalWinfrey/curly-train/issues`. 
 - **#9** — Selling fee / tax settings not wired into P&L math
 - **#10** — No error boundaries
 - **#11** — No form validation, no date picker
-- **#12** — Commander Deck / Bundle have no dedicated detail screen
+- **#12** — Already fixed: CommanderDeckDetail.tsx and BundleDetail.tsx now exist
 - **#14** — Push notifications not implemented
 - **#15** — CSV export/import not implemented
 - **#16** — No test suite (Playwright e2e tests exist in `e2e/` but no unit tests)
@@ -85,6 +87,8 @@ components/
     PlayBoosterDetail.tsx
     CollectorBoosterDetail.tsx
     SecretLairDetail.tsx
+    CommanderDeckDetail.tsx
+    BundleDetail.tsx
   PriceChart.tsx          SVG line chart (WARNING: still uses hardcoded data, see #7)
   RecommendationCard.tsx  Signal badge + rationale bullets + confidence bars
   InvestmentScore.tsx     Animated arc gauge
@@ -94,12 +98,13 @@ components/
   SearchBar.tsx, ProductCard.tsx, FilterChip.tsx, SectionHeader.tsx, etc.
 
 data/
-  types.ts               All TypeScript types (Product, CollectionItem, etc.)
+  types.ts               All TypeScript types (Product, CollectionItem, LiveEVData, etc.)
   products.ts            7 hand-curated static products (rich data)
   scryfall.ts            Scryfall API integration — generates Product objects per set
   manapool.ts            Manapool fetch helper (calls /api/manapool-prices)
   productCatalog.ts      Combines Scryfall + Manapool into the full product catalog
   userState.tsx          React Context — in-memory state + calls buildProductCatalog()
+  useSetEV.ts            Hook for live EV data from /api/set-ev
 
 e2e/
   discover-game-filter.spec.ts
