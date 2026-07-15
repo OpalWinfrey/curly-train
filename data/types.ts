@@ -106,6 +106,7 @@ export interface Product {
 
 export interface CollectionItem {
   id: string;
+  userId?: string;
   productId: string;
   quantity: number;
   purchasePrice: number;
@@ -116,8 +117,26 @@ export interface CollectionItem {
 
 export interface WatchlistItem {
   id: string;
+  userId?: string;
   productId: string;
   targetPrice: number;
   dateAdded: string;
   notes?: string;
+}
+
+export interface UserPreferences {
+  currency: string;
+  marketplace: string;
+  sellingFeePct: number;
+  taxRatePct: number;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string | null;
+  displayName: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  isPublic: boolean;
+  itemCount: number;
 }
