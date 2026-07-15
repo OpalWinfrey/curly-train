@@ -20,12 +20,12 @@ import { useProductArt } from '../../data/scryfall';
 import { useSetEV } from '../../data/useSetEV';
 import type { Product, Condition } from '../../data/types';
 
-const TABS = ['Overview', 'Collector Hits', 'EV Breakdown', 'Price History'] as const;
+const TABS = ['Overview', 'Booster Hits', 'EV Breakdown', 'Price History'] as const;
 type Tab = typeof TABS[number];
 
 interface Props { product: Product }
 
-export function CollectorBoosterDetail({ product }: Props) {
+export function BundleDetail({ product }: Props) {
   const router = useRouter();
   const { addToCollection, addToWatchlist, isInCollection, isInWatchlist } = useUserState();
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
@@ -34,20 +34,15 @@ export function CollectorBoosterDetail({ product }: Props) {
 
   const inCollection = isInCollection(product.id);
   const inWatchlist = isInWatchlist(product.id);
-  const isCase = product.productType === 'collector-booster-case';
-  const CASE_MULTIPLIER = isCase ? 6 : 1;
-  const meta = product.collectorMetadata;
-  const { loading: evLoading, evData } = useSetEV(product.setCode, product.productType);
+  const packsPerBundle = product.packContents?.packsPerBox ?? 10;
 
-  const boxEV = evData?.expectedValue ?? product.expectedValue ?? 0;
-  const displayEV = boxEV * CASE_MULTIPLIER;
-  const displaySegments = (evData?.evSegments ?? product.evSegments)?.map(s =>
-    isCase
-      ? { ...s, amount: `$${(parseFloat(s.amount.replace('$', '')) * 6).toFixed(2)}` }
-      : s,
-  );
-  const displayHits = evData?.topHits ?? product.collectorBoosterHits;
+  const { loading: evLoading, evData } = useSetEV(product.setCode, 'bundle');
+
+  const bundleEV = evData?.expectedValue ?? product.expectedValue ?? 0;
+  const liveSegments = evData?.evSegments ?? product.evSegments;
+  const liveHits = evData?.topHits ?? product.playBoosterHits;
   const isLive = !!evData;
+
   const changeSign = product.priceChangeWeek >= 0 ? '+' : '';
   const weekChange = `${changeSign}$${Math.abs(product.priceChangeWeek).toFixed(2)} · ${changeSign}${product.priceChangePct.toFixed(2)}%`;
 
@@ -62,13 +57,13 @@ export function CollectorBoosterDetail({ product }: Props) {
   }
 
   const showOverview = activeTab === 'Overview';
-  const showHits = activeTab === 'Collector Hits';
+  const showHits = activeTab === 'Booster Hits';
   const showEV = activeTab === 'EV Breakdown';
   const showPrice = activeTab === 'Price History';
 
   const setLines = product.setName.split(':');
   const title = setLines.length > 1 ? `${setLines[0]}:\n${setLines[1].trim()}` : product.setName;
-  const heroImageUrl = useProductArt(product.setCode, product.collectorBoosterHits?.[0]?.name) ?? undefined;
+  const heroImageUrl = useProductArt(product.setCode, product.playBoosterHits?.[0]?.name) ?? undefined;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -97,13 +92,13 @@ export function CollectorBoosterDetail({ product }: Props) {
           setCode={product.setCode}
           year={product.releaseDate.split('-')[0]}
           title={title}
-          subtitle={isCase ? 'Collector Booster Case (6 Boxes)' : 'Collector Booster Box'}
+          subtitle="Bundle"
           releaseDate={`Released ${new Date(product.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
           heroImageUrl={heroImageUrl}
           metrics={[
             { label: 'Market Price', value: `$${product.currentMarketPrice.toFixed(2)}`, sub: `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` },
-            { label: isCase ? 'Case EV' : 'Expected EV', value: evLoading ? '…' : `$${displayEV.toFixed(2)}`, sub: evLoading ? 'Loading…' : `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
-            { label: 'Investment Score', value: String(product.investmentScore ?? 0), sub: product.investmentScore! >= 80 ? 'EXCELLENT' : product.investmentScore! >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: product.investmentScore ?? 0 },
+            { label: 'Expected EV', value: evLoading ? '…' : `$${bundleEV.toFixed(2)}`, sub: evLoading ? 'Loading…' : `${((bundleEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
+            { label: 'Investment Score', value: String(product.investmentScore ?? 0), sub: (product.investmentScore ?? 0) >= 80 ? 'EXCELLENT' : (product.investmentScore ?? 0) >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: product.investmentScore ?? 0 },
           ]}
         />
 
@@ -119,35 +114,26 @@ export function CollectorBoosterDetail({ product }: Props) {
         </ScrollView>
 
         <View style={styles.content}>
-          {/* Collector Box Overview */}
-          {(showOverview || showEV) && meta && (
+          {/* Bundle contents */}
+          {(showOverview || showEV) && product.packContents && (
             <View>
               <View style={styles.sectionHead}>
-                <SectionHeader eyebrow="Product Details" title={isCase ? 'Collector Case Contents' : 'Collector Box Contents'} />
+                <SectionHeader eyebrow="Product Details" title="Bundle Contents" />
               </View>
               <View style={styles.card}>
                 <Text style={styles.boxDesc}>
-                  {isCase
-                    ? `Each Collector Booster Case contains 6 Collector Booster Boxes (${meta.packsPerBox * 6} packs total) packed with premium treatments, foils, and exclusive alternate arts.`
-                    : `Each Collector Booster Box contains ${meta.packsPerBox} Collector Boosters packed with premium treatments, foils, and exclusive alternate arts.`}
+                  {product.packContents.description ??
+                    `Each Bundle contains ${packsPerBundle} Play Boosters plus promo cards and accessories. Each Play Booster includes ${product.packContents.cardsPerPack} Magic cards.`}
                 </Text>
                 <View style={styles.boxStats}>
-                  {(isCase
-                    ? [
-                        { val: '6', lbl: 'Boxes\nper Case' },
-                        { val: String(meta.packsPerBox * 6), lbl: 'Total\nPacks' },
-                        { val: meta.guaranteedFoils, lbl: 'Guaranteed\nFoils / Box' },
-                        { val: meta.serializedOdds ?? 'N/A', lbl: 'Serialized\nOdds' },
-                      ]
-                    : [
-                        { val: String(meta.packsPerBox), lbl: 'Packs\nper Box' },
-                        { val: meta.guaranteedFoils, lbl: 'Guaranteed\nFoils' },
-                        { val: meta.extendedArtSlots, lbl: 'Premium\nSlots / Pack' },
-                        { val: meta.serializedOdds ?? 'N/A', lbl: 'Serialized\nOdds' },
-                      ]
-                  ).map((s, i, arr) => (
+                  {[
+                    { val: String(packsPerBundle), lbl: 'Play\nBoosters' },
+                    { val: String(product.packContents.cardsPerPack), lbl: 'Cards\nper Pack' },
+                    { val: product.packContents.raresPerPack, lbl: 'Rares or\nhigher / Pack' },
+                    { val: product.packContents.foilRate, lbl: 'Foil\nRate' },
+                  ].map((s, i, arr) => (
                     <View key={s.lbl} style={[styles.bsCell, i < arr.length - 1 && styles.bsCellBorder]}>
-                      <Text style={styles.bsVal} numberOfLines={2}>{s.val}</Text>
+                      <Text style={styles.bsVal}>{s.val}</Text>
                       <Text style={styles.bsLbl}>{s.lbl}</Text>
                     </View>
                   ))}
@@ -156,31 +142,21 @@ export function CollectorBoosterDetail({ product }: Props) {
             </View>
           )}
 
-          {/* Risk Concentration Warning */}
-          {showOverview && meta && meta.riskConcentration !== undefined && meta.riskConcentration > 55 && (
-            <View style={styles.riskCard}>
-              <Text style={styles.riskTitle}>⚠ Concentration Risk</Text>
-              <Text style={styles.riskText}>
-                The top 3 chase cards account for approximately {meta.riskConcentration}% of the box expected value. High variance — pulling key mythics is essential to EV.
-              </Text>
-            </View>
-          )}
-
           {/* EV Breakdown */}
-          {(showOverview || showEV) && (displaySegments || evLoading) && (
+          {(showOverview || showEV) && (liveSegments || evLoading) && (
             <View>
               <View style={styles.sectionHead}>
-                <SectionHeader eyebrow={isCase ? 'Per Case Opening (6 Boxes)' : 'Per Box Opening'} title="Premium Treatment Breakdown" />
+                <SectionHeader eyebrow="Per Bundle Opening" title="Expected Value Breakdown" />
                 {isLive && <Text style={styles.liveBadge}>LIVE</Text>}
               </View>
-              {evLoading && !displaySegments
+              {evLoading && !liveSegments
                 ? <View style={styles.loadingBox}><Text style={styles.loadingText}>Computing EV from live card prices…</Text></View>
-                : displaySegments && <ValueBreakdown totalEV={`$${displayEV.toFixed(2)}`} segments={displaySegments} />}
+                : liveSegments && <ValueBreakdown totalEV={`$${bundleEV.toFixed(2)}`} segments={liveSegments} />}
             </View>
           )}
 
-          {/* Collector Hits */}
-          {(showOverview || showHits) && (displayHits || evLoading) && (
+          {/* Booster Hits */}
+          {(showOverview || showHits) && (liveHits || evLoading) && (
             <View>
               {isLive && (
                 <View style={styles.liveRow}>
@@ -188,14 +164,14 @@ export function CollectorBoosterDetail({ product }: Props) {
                   {evData?.lastUpdated && <Text style={styles.liveDate}>Updated {evData.lastUpdated}</Text>}
                 </View>
               )}
-              {evLoading && !displayHits
-                ? <View style={styles.loadingBox}><Text style={styles.loadingText}>Fetching collector hit data…</Text></View>
-                : displayHits && (
+              {evLoading && !liveHits
+                ? <View style={styles.loadingBox}><Text style={styles.loadingText}>Fetching booster hit data…</Text></View>
+                : liveHits && (
                   <TopHitCard
-                    hits={displayHits}
-                    totalCount={displayHits.length}
-                    packsTotal={isCase ? (meta?.packsPerBox ?? 12) * 6 : (meta?.packsPerBox ?? 12)}
-                    label={isCase ? 'Collector Case Hits' : 'Collector Hits'}
+                    hits={liveHits}
+                    totalCount={liveHits.length}
+                    packsTotal={packsPerBundle}
+                    label="Booster Hits"
                   />
                 )}
             </View>
@@ -214,8 +190,8 @@ export function CollectorBoosterDetail({ product }: Props) {
               <View style={styles.sectionHead}><SectionHeader eyebrow="Analysis" title="Investment Score" /></View>
               <InvestmentScore
                 score={product.investmentScore ?? 0}
-                grade={product.investmentScore! >= 80 ? 'Excellent' : product.investmentScore! >= 65 ? 'Good' : 'Fair'}
-                description="Weighted score based on premium treatment demand, price momentum, and supply concentration."
+                grade={(product.investmentScore ?? 0) >= 80 ? 'Excellent' : (product.investmentScore ?? 0) >= 65 ? 'Good' : 'Fair'}
+                description="Based on EV ratio, price momentum, liquidity, and current supply levels."
                 bars={product.scoreBars}
               />
             </View>
@@ -290,20 +266,10 @@ const styles = StyleSheet.create({
   card: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
   boxDesc: { fontSize: 13, color: Colors.text2, lineHeight: 19, padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.border2 },
   boxStats: { flexDirection: 'row' },
-  bsCell: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center', paddingHorizontal: 4 },
+  bsCell: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center' },
   bsCellBorder: { borderRightWidth: 1, borderRightColor: Colors.border2 },
-  bsVal: { fontSize: 11, fontWeight: '800', color: Colors.text1, letterSpacing: -0.3, fontVariant: ['tabular-nums'], lineHeight: 16, textAlign: 'center' },
+  bsVal: { fontSize: 15, fontWeight: '800', color: Colors.text1, letterSpacing: -0.4, fontVariant: ['tabular-nums'], lineHeight: 18 },
   bsLbl: { fontSize: 9, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, color: Colors.text3, textAlign: 'center', marginTop: 3, lineHeight: 12 },
-  riskCard: {
-    backgroundColor: Colors.warnBg,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.warning,
-    padding: Spacing.lg,
-    gap: 6,
-  },
-  riskTitle: { fontSize: 13, fontWeight: '800', color: Colors.warning },
-  riskText: { fontSize: 12, color: Colors.text2, lineHeight: 18 },
   ctaRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
   ctaBtn: { flex: 1, height: 48, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
   ctaPrimary: { backgroundColor: Colors.accent },

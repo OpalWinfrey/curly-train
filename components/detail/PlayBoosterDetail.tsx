@@ -36,7 +36,7 @@ export function PlayBoosterDetail({ product }: Props) {
   const inWatchlist = isInWatchlist(product.id);
   const isCase = product.productType === 'play-booster-case';
   const CASE_MULTIPLIER = isCase ? 6 : 1;
-  const { loading: evLoading, evData } = useSetEV(product.setCode);
+  const { loading: evLoading, evData } = useSetEV(product.setCode, product.productType);
 
   // Prefer live Scryfall-computed data; fall back to static data in products.ts
   const boxEV = evData?.expectedValue ?? product.expectedValue ?? 0;

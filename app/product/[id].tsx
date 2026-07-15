@@ -5,6 +5,7 @@ import { useUserState } from '../../data/userState';
 import { PlayBoosterDetail } from '../../components/detail/PlayBoosterDetail';
 import { CollectorBoosterDetail } from '../../components/detail/CollectorBoosterDetail';
 import { SecretLairDetail } from '../../components/detail/SecretLairDetail';
+import { BundleDetail } from '../../components/detail/BundleDetail';
 import { Colors, Spacing, Radius } from '../../components/tokens';
 
 export default function ProductDetailScreen() {
@@ -50,7 +51,11 @@ export default function ProductDetailScreen() {
     return <SecretLairDetail product={product} />;
   }
 
-  // Generic fallback for commander decks, bundles, etc.
+  if (product.productType === 'bundle') {
+    return <BundleDetail product={product} />;
+  }
+
+  // Commander decks and any other types: show price history + investment score only
   return <PlayBoosterDetail product={product} />;
 }
 

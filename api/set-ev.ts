@@ -15,16 +15,33 @@ interface ScryfallPage {
   next_page?: string;
 }
 
-// ── Play booster slot model (standard MTG expansion, 36 packs/box) ─────────
-const PACKS = 36;
-const MYTHIC_RATE = 1 / 8;          // 1 in 8 rare/mythic slots is a mythic
-const RARE_RATE = 7 / 8;
-const FOIL_PER_BOX = PACKS;         // 1 guaranteed foil per pack
-const FOIL_RARE_RATE = 0.085;       // ~8.5% of foil slot lands on a rare
-const FOIL_MYTHIC_RATE = 0.02;      // ~2% of foil slot lands on a mythic
-const TREATMENT_PER_BOX = PACKS / 7; // ~1 in 7 packs has a showcase/bonus slot
-const SPECIAL_GUEST_PER_BOX = PACKS / 45; // ~1 in 45 packs = special guest rare
-const BULK_EV_PER_BOX = 8.50;       // flat estimate for commons/uncommons
+interface SlotModel {
+  PACKS: number; MYTHIC_RATE: number; RARE_RATE: number;
+  FOIL_PER_BOX: number; FOIL_RARE_RATE: number; FOIL_MYTHIC_RATE: number;
+  TREATMENT_PER_BOX: number; SPECIAL_GUEST_PER_BOX: number; BULK_EV_PER_BOX: number;
+}
+
+function getSlotModel(productType: string): SlotModel {
+  if (productType.startsWith('collector-booster')) {
+    return {
+      PACKS: 12, MYTHIC_RATE: 1 / 8, RARE_RATE: 7 / 8,
+      FOIL_PER_BOX: 48, FOIL_RARE_RATE: 0.30, FOIL_MYTHIC_RATE: 0.10,
+      TREATMENT_PER_BOX: 24, SPECIAL_GUEST_PER_BOX: 12 / 20, BULK_EV_PER_BOX: 2.50,
+    };
+  }
+  if (productType === 'bundle') {
+    return {
+      PACKS: 10, MYTHIC_RATE: 1 / 8, RARE_RATE: 7 / 8,
+      FOIL_PER_BOX: 10, FOIL_RARE_RATE: 0.085, FOIL_MYTHIC_RATE: 0.02,
+      TREATMENT_PER_BOX: 10 / 7, SPECIAL_GUEST_PER_BOX: 10 / 45, BULK_EV_PER_BOX: 2.50,
+    };
+  }
+  return {
+    PACKS: 36, MYTHIC_RATE: 1 / 8, RARE_RATE: 7 / 8,
+    FOIL_PER_BOX: 36, FOIL_RARE_RATE: 0.085, FOIL_MYTHIC_RATE: 0.02,
+    TREATMENT_PER_BOX: 36 / 7, SPECIAL_GUEST_PER_BOX: 36 / 45, BULK_EV_PER_BOX: 8.50,
+  };
+}
 
 // 8 deterministic color pairs for card art gradients (dark bg, accent)
 const ART_COLOR_PAIRS: [string, string][] = [
@@ -94,6 +111,12 @@ export default async function handler(req: any, res: any) {
     res.status(400).json({ error: 'Missing setCode' });
     return;
   }
+
+  const productType = ((req.query.productType as string | undefined) ?? 'play-booster-box').toLowerCase();
+  const {
+    PACKS, MYTHIC_RATE, RARE_RATE, FOIL_PER_BOX, FOIL_RARE_RATE, FOIL_MYTHIC_RATE,
+    TREATMENT_PER_BOX, SPECIAL_GUEST_PER_BOX, BULK_EV_PER_BOX,
+  } = getSlotModel(productType);
 
   let cards: ScryfallCard[];
   try {

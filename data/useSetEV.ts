@@ -14,8 +14,15 @@ const COLOR_MAP: Record<string, string> = {
 
 const cache = new Map<string, LiveEVData>();
 
-export function useSetEV(setCode: string): { loading: boolean; evData: LiveEVData | null } {
-  const key = setCode.toUpperCase();
+function apiType(productType: string): string {
+  if (productType === 'play-booster-case') return 'play-booster-box';
+  if (productType === 'collector-booster-case') return 'collector-booster-box';
+  return productType;
+}
+
+export function useSetEV(setCode: string, productType = 'play-booster-box'): { loading: boolean; evData: LiveEVData | null } {
+  const normalizedType = apiType(productType);
+  const key = `${setCode.toUpperCase()}:${normalizedType}`;
   const [loading, setLoading] = useState(!cache.has(key));
   const [evData, setEvData] = useState<LiveEVData | null>(cache.get(key) ?? null);
 
@@ -24,7 +31,7 @@ export function useSetEV(setCode: string): { loading: boolean; evData: LiveEVDat
     let active = true;
     setLoading(true);
 
-    fetch(`/api/set-ev?setCode=${encodeURIComponent(key)}`)
+    fetch(`/api/set-ev?setCode=${encodeURIComponent(setCode.toUpperCase())}&productType=${encodeURIComponent(normalizedType)}`)
       .then(r => (r.ok ? r.json() : null))
       .then((data: LiveEVData | null) => {
         if (!active || !data) return;
