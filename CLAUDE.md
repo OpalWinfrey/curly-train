@@ -54,15 +54,15 @@ Open issues are tracked at `https://github.com/OpalWinfrey/curly-train/issues`. 
 - **#10** — No error boundaries
 - **#11** — No form validation, no date picker
 - **#12** — Commander Deck / Bundle have no dedicated detail screen
-- **#13** — Notification bell and share buttons have no onPress
 - **#14** — Push notifications not implemented
 - **#15** — CSV export/import not implemented
 - **#16** — No test suite (Playwright e2e tests exist in `e2e/` but no unit tests)
 - **#17** — No ESLint/Prettier
-- **#18** — BottomNav, MarketOverviewCard, EVMetricsRow, MetricCard are unused
-- **#22** — Detail screen shows `$0.00` for unpriced catalog products
 - **#24** — Vercel CI/CD is set up (`.github/workflows/deploy.yml`) — this issue may already be resolved
 - **#3** — Already fixed: RecommendationCard props mismatch (was crashing on render)
+- **#13** — Already fixed: share button now calls Share.share() in all detail screens
+- **#18** — Already fixed: deleted unused BottomNav, MarketOverviewCard, EVMetricsRow, MetricCard
+- **#22** — Already fixed: unpriced catalog products show "N/A" instead of "$0.00"
 
 ## File structure
 
@@ -91,7 +91,7 @@ components/
   ValueBreakdown.tsx      SVG donut + EV legend
   TopHitCard.tsx          Pull-rate table
   tokens.ts               Design system (Colors, Spacing, Radius, Typography)
-  ... (other shared components)
+  SearchBar.tsx, ProductCard.tsx, FilterChip.tsx, SectionHeader.tsx, etc.
 
 data/
   types.ts               All TypeScript types (Product, CollectionItem, etc.)
