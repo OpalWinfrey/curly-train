@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { Colors, Radius, Spacing, Typography } from './tokens';
 import type { PricePoint } from '../data/types';
@@ -33,7 +33,8 @@ function formatAxisDate(dateStr: string): string {
 
 export function PriceChart({ currentPrice, weekChange, priceHistory }: Props) {
   const [period, setPeriod] = useState<Period>('1M');
-  const chartWidth = Dimensions.get('window').width - 72;
+  const { width: windowWidth } = useWindowDimensions();
+  const chartWidth = windowWidth - 72;
 
   const prices = filterHistory(priceHistory, period);
   const minP = Math.min(...prices) - 2;

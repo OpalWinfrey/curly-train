@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { CollectionItem, WatchlistItem, Product } from './types';
-import { PRODUCTS } from './products';
+import { PRODUCTS, makeHistory } from './products';
 import { fetchSealedPrices } from './manapool';
 import { fetchScryfallSets } from './scryfall';
 import { buildProductCatalog, buildCatalogFromScryfall } from './productCatalog';
@@ -73,7 +73,9 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
         .filter(p => !staticKeys.has(`${p.setCode}-${p.productType}`))
         .map(p => {
           const price = priceById.get(p.id) ?? priceByTypeKey.get(`${p.setCode.toLowerCase()}-${p.productType}`);
-          return price != null && price > 0 ? { ...p, currentMarketPrice: price } : p;
+          return price != null && price > 0
+            ? { ...p, currentMarketPrice: price, priceHistory: makeHistory(price, 'flat') }
+            : p;
         });
 
       setProducts([...PRODUCTS, ...extra]);

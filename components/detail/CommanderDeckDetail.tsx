@@ -15,6 +15,8 @@ import { AddToCollectionModal } from '../AddToCollectionModal';
 import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
 import { useUserState } from '../../data/userState';
+import { useSetEV } from '../../data/useSetEV';
+import { computeInvestmentScore } from '../../data/computeScore';
 import type { Product, Condition } from '../../data/types';
 
 interface Props { product: Product }
@@ -32,6 +34,14 @@ export function CommanderDeckDetail({ product }: Props) {
   const totalCardValue = includedCards.reduce((s, c) => s + c.price, 0);
   const changeSign = product.priceChangeWeek >= 0 ? '+' : '';
   const weekChange = `${changeSign}$${Math.abs(product.priceChangeWeek).toFixed(2)} · ${changeSign}${product.priceChangePct.toFixed(2)}%`;
+
+  const { evData } = useSetEV(product.setCode, product.productType);
+  const isUnreleased = !!product.releaseDate && new Date(product.releaseDate) > new Date();
+  const analysis = !isUnreleased && evData && product.investmentScore === undefined
+    ? computeInvestmentScore(product, evData)
+    : null;
+  const computedScore = analysis?.investmentScore ?? product.investmentScore;
+  const computedBars = analysis?.scoreBars ?? product.scoreBars;
 
   function handleAddToCollection(qty: number, price: number, date: string, condition: Condition, notes: string) {
     addToCollection({ productId: product.id, quantity: qty, purchasePrice: price, purchaseDate: date, condition, notes });
@@ -110,7 +120,7 @@ export function CommanderDeckDetail({ product }: Props) {
               </View>
             )}
             <View style={[styles.metricCell, styles.metricBorder]}>
-              <Text style={[styles.metricVal, { color: Colors.accent }]}>{product.investmentScore ?? '—'}</Text>
+              <Text style={[styles.metricVal, { color: Colors.accent }]}>{computedScore ?? '—'}</Text>
               <Text style={styles.metricLbl}>Invest Score</Text>
             </View>
           </View>
@@ -138,14 +148,14 @@ export function CommanderDeckDetail({ product }: Props) {
           )}
 
           {/* Investment Score */}
-          {product.scoreBars && (
+          {computedBars && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="Analysis" title="Investment Score" /></View>
               <InvestmentScore
-                score={product.investmentScore ?? 0}
-                grade={(product.investmentScore ?? 0) >= 80 ? 'Excellent' : (product.investmentScore ?? 0) >= 65 ? 'Good' : 'Fair'}
-                description="Based on singles value, price momentum, liquidity, and reprint risk of key cards."
-                bars={product.scoreBars}
+                score={computedScore ?? 0}
+                grade={(computedScore ?? 0) >= 80 ? 'Excellent' : (computedScore ?? 0) >= 65 ? 'Good' : 'Fair'}
+                description="Based on EV ratio, set quality, chase card ceiling, and market timing."
+                bars={computedBars}
               />
             </View>
           )}
@@ -153,11 +163,15 @@ export function CommanderDeckDetail({ product }: Props) {
           {/* Recommendation */}
           <View>
             <View style={styles.sectionHead}><SectionHeader eyebrow="Based on Current Data" title="Recommendation" /></View>
-            <RecommendationCard
-              signal={product.recommendation ?? 'HOLD'}
-              rationale={product.recommendationRationale ?? ''}
-              confidence={product.confidence ?? 60}
-            />
+            {isUnreleased ? (
+              <View style={styles.unreleased}><Text style={styles.unreleasedText}>Full analysis available after release — check back soon.</Text></View>
+            ) : (
+              <RecommendationCard
+                signal={analysis?.recommendation ?? product.recommendation ?? 'HOLD'}
+                rationale={analysis?.recommendationRationale ?? product.recommendationRationale ?? ''}
+                confidence={analysis?.confidence ?? product.confidence ?? 60}
+              />
+            )}
           </View>
 
           <View style={styles.ctaRow}>
@@ -222,4 +236,6 @@ const styles = StyleSheet.create({
   ctaSecondary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   ctaPrimaryText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   ctaSecondaryText: { fontSize: 14, fontWeight: '700', color: Colors.text2 },
+  unreleased: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.xl, alignItems: 'center' },
+  unreleasedText: { fontSize: 13, color: Colors.text3 },
 });

@@ -18,6 +18,7 @@ import { Colors, Spacing, Radius } from '../tokens';
 import { useUserState } from '../../data/userState';
 import { useProductArt } from '../../data/scryfall';
 import { useSetEV } from '../../data/useSetEV';
+import { computeInvestmentScore } from '../../data/computeScore';
 import type { Product, Condition } from '../../data/types';
 
 const TABS = ['Overview', 'Booster Hits', 'EV Breakdown', 'Price History'] as const;
@@ -37,6 +38,12 @@ export function BundleDetail({ product }: Props) {
   const packsPerBundle = product.packContents?.packsPerBox ?? 10;
 
   const { loading: evLoading, evData } = useSetEV(product.setCode, 'bundle');
+  const isUnreleased = !!product.releaseDate && new Date(product.releaseDate) > new Date();
+  const analysis = !isUnreleased && evData && product.investmentScore === undefined
+    ? computeInvestmentScore(product, evData)
+    : null;
+  const computedScore = analysis?.investmentScore ?? product.investmentScore ?? 0;
+  const computedBars = analysis?.scoreBars ?? product.scoreBars;
 
   const bundleEV = evData?.expectedValue ?? product.expectedValue ?? 0;
   const liveSegments = evData?.evSegments ?? product.evSegments;
@@ -98,7 +105,7 @@ export function BundleDetail({ product }: Props) {
           metrics={[
             { label: 'Market Price', value: `$${product.currentMarketPrice.toFixed(2)}`, sub: `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` },
             { label: 'Expected EV', value: evLoading ? '…' : `$${bundleEV.toFixed(2)}`, sub: evLoading ? 'Loading…' : `${((bundleEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` },
-            { label: 'Investment Score', value: String(product.investmentScore ?? 0), sub: (product.investmentScore ?? 0) >= 80 ? 'EXCELLENT' : (product.investmentScore ?? 0) >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: product.investmentScore ?? 0 },
+            { label: 'Investment Score', value: String(computedScore), sub: computedScore >= 80 ? 'EXCELLENT' : computedScore >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: computedScore },
           ]}
         />
 
@@ -185,14 +192,14 @@ export function BundleDetail({ product }: Props) {
             </View>
           )}
 
-          {showOverview && product.scoreBars && (
+          {showOverview && computedBars && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="Analysis" title="Investment Score" /></View>
               <InvestmentScore
-                score={product.investmentScore ?? 0}
-                grade={(product.investmentScore ?? 0) >= 80 ? 'Excellent' : (product.investmentScore ?? 0) >= 65 ? 'Good' : 'Fair'}
-                description="Based on EV ratio, price momentum, liquidity, and current supply levels."
-                bars={product.scoreBars}
+                score={computedScore}
+                grade={computedScore >= 80 ? 'Excellent' : computedScore >= 65 ? 'Good' : 'Fair'}
+                description="Based on EV ratio, set quality, chase card ceiling, and market timing."
+                bars={computedBars}
               />
             </View>
           )}
@@ -200,11 +207,15 @@ export function BundleDetail({ product }: Props) {
           {showOverview && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="Based on Current Pricing" title="Recommendation" /></View>
-              <RecommendationCard
-                signal={product.recommendation ?? 'HOLD'}
-                rationale={product.recommendationRationale ?? ''}
-                confidence={product.confidence ?? 60}
-              />
+              {isUnreleased ? (
+                <View style={styles.loadingBox}><Text style={styles.loadingText}>Full analysis available after release — check back soon.</Text></View>
+              ) : (
+                <RecommendationCard
+                  signal={analysis?.recommendation ?? product.recommendation ?? 'HOLD'}
+                  rationale={analysis?.recommendationRationale ?? product.recommendationRationale ?? ''}
+                  confidence={analysis?.confidence ?? product.confidence ?? 60}
+                />
+              )}
             </View>
           )}
 

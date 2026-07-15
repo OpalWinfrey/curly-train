@@ -18,6 +18,7 @@ import { Colors, Spacing, Radius } from '../tokens';
 import { useUserState } from '../../data/userState';
 import { useProductArt } from '../../data/scryfall';
 import { useSetEV } from '../../data/useSetEV';
+import { computeInvestmentScore } from '../../data/computeScore';
 import type { Product, Condition } from '../../data/types';
 
 const TABS = ['Overview', 'Collector Hits', 'EV Breakdown', 'Price History'] as const;
@@ -38,6 +39,12 @@ export function CollectorBoosterDetail({ product }: Props) {
   const CASE_MULTIPLIER = isCase ? 6 : 1;
   const meta = product.collectorMetadata;
   const { loading: evLoading, evData } = useSetEV(product.setCode, product.productType);
+  const isUnreleased = !!product.releaseDate && new Date(product.releaseDate) > new Date();
+  const analysis = !isUnreleased && evData && product.investmentScore === undefined
+    ? computeInvestmentScore(product, evData)
+    : null;
+  const computedScore = analysis?.investmentScore ?? product.investmentScore ?? 0;
+  const computedBars = analysis?.scoreBars ?? product.scoreBars;
 
   const boxEV = evData?.expectedValue ?? product.expectedValue ?? 0;
   const displayEV = boxEV * CASE_MULTIPLIER;
@@ -103,7 +110,7 @@ export function CollectorBoosterDetail({ product }: Props) {
           metrics={[
             { label: 'Market Price', value: product.currentMarketPrice > 0 ? `$${product.currentMarketPrice.toFixed(2)}` : 'N/A', sub: product.currentMarketPrice > 0 ? `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` : 'No price data' },
             { label: isCase ? 'Case EV' : 'Expected EV', value: evLoading ? '…' : `$${displayEV.toFixed(2)}`, sub: evLoading ? 'Loading…' : product.currentMarketPrice > 0 ? `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` : '' },
-            { label: 'Investment Score', value: String(product.investmentScore ?? 0), sub: product.investmentScore! >= 80 ? 'EXCELLENT' : product.investmentScore! >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: product.investmentScore ?? 0 },
+            { label: 'Investment Score', value: String(computedScore), sub: computedScore >= 80 ? 'EXCELLENT' : computedScore >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: computedScore },
           ]}
         />
 
@@ -209,14 +216,14 @@ export function CollectorBoosterDetail({ product }: Props) {
             </View>
           )}
 
-          {showOverview && product.scoreBars && (
+          {showOverview && computedBars && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="Analysis" title="Investment Score" /></View>
               <InvestmentScore
-                score={product.investmentScore ?? 0}
-                grade={product.investmentScore! >= 80 ? 'Excellent' : product.investmentScore! >= 65 ? 'Good' : 'Fair'}
-                description="Weighted score based on premium treatment demand, price momentum, and supply concentration."
-                bars={product.scoreBars}
+                score={computedScore}
+                grade={computedScore >= 80 ? 'Excellent' : computedScore >= 65 ? 'Good' : 'Fair'}
+                description="Based on EV ratio, set quality, chase card ceiling, and market timing."
+                bars={computedBars}
               />
             </View>
           )}
@@ -224,11 +231,15 @@ export function CollectorBoosterDetail({ product }: Props) {
           {showOverview && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="Based on Current Pricing" title="Recommendation" /></View>
-              <RecommendationCard
-                signal={product.recommendation ?? 'HOLD'}
-                rationale={product.recommendationRationale ?? ''}
-                confidence={product.confidence ?? 60}
-              />
+              {isUnreleased ? (
+                <View style={styles.loadingBox}><Text style={styles.loadingText}>Full analysis available after release — check back soon.</Text></View>
+              ) : (
+                <RecommendationCard
+                  signal={analysis?.recommendation ?? product.recommendation ?? 'HOLD'}
+                  rationale={analysis?.recommendationRationale ?? product.recommendationRationale ?? ''}
+                  confidence={analysis?.confidence ?? product.confidence ?? 60}
+                />
+              )}
             </View>
           )}
 

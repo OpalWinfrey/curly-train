@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
 import { InvestmentScore } from '../InvestmentScore';
+import { PriceChart } from '../PriceChart';
 import { RecommendationCard } from '../RecommendationCard';
 import { SectionHeader } from '../SectionHeader';
 import { IncludedCardRow } from '../IncludedCardRow';
@@ -69,6 +70,9 @@ export function SecretLairDetail({ product }: Props) {
   const bonusCards = (product.includedCards ?? []).filter(c => c.isBonus);
   const totalCardValue = (product.includedCards ?? []).reduce((s, c) => s + c.price, 0);
   const msrp = meta?.msrpNonfoil ?? 29.99;
+  const isUnreleased = !!product.releaseDate && new Date(product.releaseDate) > new Date();
+  const changeSign = product.priceChangeWeek >= 0 ? '+' : '';
+  const weekChange = `${changeSign}$${Math.abs(product.priceChangeWeek).toFixed(2)} · ${changeSign}${product.priceChangePct.toFixed(2)}%`;
   const sealedVsMsrp = product.currentMarketPrice - msrp;
   const cardVsMsrp = totalCardValue - msrp;
 
@@ -210,13 +214,21 @@ export function SecretLairDetail({ product }: Props) {
             </View>
           )}
 
+          {/* Price History */}
+          {product.priceHistory.length > 0 && (
+            <View>
+              <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
+              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
+            </View>
+          )}
+
           {/* Investment Score */}
           {product.scoreBars && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="Overall" title="Investment Score" /></View>
               <InvestmentScore
                 score={product.investmentScore ?? 0}
-                grade={product.investmentScore! >= 80 ? 'Excellent' : product.investmentScore! >= 65 ? 'Good' : 'Fair'}
+                grade={(product.investmentScore ?? 0) >= 80 ? 'Excellent' : (product.investmentScore ?? 0) >= 65 ? 'Good' : 'Fair'}
                 description="Based on card value vs MSRP, reprint risk, Commander playability, and aftermarket demand."
                 bars={product.scoreBars}
               />
@@ -226,11 +238,15 @@ export function SecretLairDetail({ product }: Props) {
           {/* Recommendation */}
           <View>
             <View style={styles.sectionHead}><SectionHeader eyebrow="Based on Current Data" title="Recommendation" /></View>
-            <RecommendationCard
-              signal={product.recommendation ?? 'HOLD'}
-              rationale={product.recommendationRationale ?? ''}
-              confidence={product.confidence ?? 60}
-            />
+            {isUnreleased ? (
+              <View style={styles.unreleased}><Text style={styles.unreleasedText}>Full analysis available after release — check back soon.</Text></View>
+            ) : (
+              <RecommendationCard
+                signal={product.recommendation ?? 'HOLD'}
+                rationale={product.recommendationRationale ?? ''}
+                confidence={product.confidence ?? 60}
+              />
+            )}
           </View>
 
           {/* CTAs */}
@@ -296,4 +312,6 @@ const styles = StyleSheet.create({
   ctaSecondary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   ctaPrimaryText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   ctaSecondaryText: { fontSize: 14, fontWeight: '700', color: Colors.text2 },
+  unreleased: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing.xl, alignItems: 'center' },
+  unreleasedText: { fontSize: 13, color: Colors.text3 },
 });
