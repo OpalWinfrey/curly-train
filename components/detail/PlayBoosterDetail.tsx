@@ -127,6 +127,31 @@ export function PlayBoosterDetail({ product }: Props) {
         </ScrollView>
 
         <View style={styles.content}>
+          {showOverview && (
+            <View>
+              <View style={styles.sectionHead}><SectionHeader eyebrow="Analysis" title="Recommendation & Score" /></View>
+              {isUnreleased ? (
+                <View style={styles.loadingBox}><Text style={styles.loadingText}>Full analysis available after release — check back soon.</Text></View>
+              ) : (
+                <View style={{ gap: Spacing.sm }}>
+                  <RecommendationCard
+                    signal={analysis?.recommendation ?? product.recommendation ?? 'HOLD'}
+                    rationale={analysis?.recommendationRationale ?? product.recommendationRationale ?? ''}
+                    confidence={analysis?.confidence ?? product.confidence ?? 60}
+                  />
+                  {computedBars && (
+                    <InvestmentScore
+                      score={computedScore}
+                      grade={computedScore >= 80 ? 'Excellent' : computedScore >= 65 ? 'Good' : 'Fair'}
+                      description="Based on EV ratio, set quality, chase card ceiling, and market timing."
+                      bars={computedBars}
+                    />
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
           {(showOverview || showEV) && product.packContents && (
             <View>
               <View style={styles.sectionHead}>
@@ -204,33 +229,6 @@ export function PlayBoosterDetail({ product }: Props) {
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
               <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
-            </View>
-          )}
-
-          {showOverview && computedBars && (
-            <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="Analysis" title="Investment Score" /></View>
-              <InvestmentScore
-                score={computedScore}
-                grade={computedScore >= 80 ? 'Excellent' : computedScore >= 65 ? 'Good' : 'Fair'}
-                description="Based on EV ratio, set quality, chase card ceiling, and market timing."
-                bars={computedBars}
-              />
-            </View>
-          )}
-
-          {showOverview && (
-            <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="Based on Current Pricing" title="Recommendation" /></View>
-              {isUnreleased ? (
-                <View style={styles.loadingBox}><Text style={styles.loadingText}>Full analysis available after release — check back soon.</Text></View>
-              ) : (
-                <RecommendationCard
-                  signal={analysis?.recommendation ?? product.recommendation ?? 'HOLD'}
-                  rationale={analysis?.recommendationRationale ?? product.recommendationRationale ?? ''}
-                  confidence={analysis?.confidence ?? product.confidence ?? 60}
-                />
-              )}
             </View>
           )}
 
