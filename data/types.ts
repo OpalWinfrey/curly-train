@@ -12,7 +12,7 @@ export type ProductType =
 export type Game = 'mtg' | 'pokemon';
 
 export type Recommendation = 'BUY' | 'HOLD' | 'WAIT' | 'SKIP';
-export type Rarity = 'M' | 'R' | 'U' | 'C';
+export type Rarity = 'M' | 'R' | 'U' | 'C' | 'S';
 export type Condition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
 
 export interface CardHit {

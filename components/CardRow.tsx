@@ -6,7 +6,7 @@ import { scryfallCardArt } from '../data/scryfall';
 
 export interface CardHit {
   name: string;
-  rarity: 'M' | 'R' | 'U' | 'C';
+  rarity: 'M' | 'R' | 'U' | 'C' | 'S';
   price: string;
   pullRate: string;
   pullPct: string;
@@ -28,6 +28,8 @@ const RARITY_STYLES: Record<string, { bg: [string, string]; text: string }> = {
   R: { bg: ['#92400E', '#D97706'], text: '#FDE68A' },
   U: { bg: ['#1D4ED8', '#3B82F6'], text: '#BFDBFE' },
   C: { bg: ['#374151', '#6B7280'], text: '#D1D5DB' },
+  // Serialized: gold shimmer to distinguish the ultra-rare insert
+  S: { bg: ['#B8860B', '#FFD700'], text: '#000' },
 };
 
 export function CardRow({ hit, isLast, packsTotal = 36 }: Props) {

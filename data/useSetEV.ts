@@ -9,6 +9,7 @@ const COLOR_MAP: Record<string, string> = {
   foils: ChartColors.foils,
   showcase: ChartColors.showcase,
   specialGuests: ChartColors.specialGuests,
+  serialized: ChartColors.serialized,
   bulk: ChartColors.bulk,
 };
 

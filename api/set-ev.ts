@@ -19,6 +19,8 @@ interface SlotModel {
   PACKS: number; MYTHIC_RATE: number; RARE_RATE: number;
   FOIL_PER_BOX: number; FOIL_RARE_RATE: number; FOIL_MYTHIC_RATE: number;
   TREATMENT_PER_BOX: number; SPECIAL_GUEST_PER_BOX: number; BULK_EV_PER_BOX: number;
+  // Serialized cards are extremely rare bonus inserts: ~1 per case (6 boxes) for CBBs
+  SERIALIZED_PER_BOX: number;
 }
 
 function getSlotModel(productType: string): SlotModel {
@@ -27,6 +29,7 @@ function getSlotModel(productType: string): SlotModel {
       PACKS: 12, MYTHIC_RATE: 1 / 8, RARE_RATE: 7 / 8,
       FOIL_PER_BOX: 48, FOIL_RARE_RATE: 0.30, FOIL_MYTHIC_RATE: 0.10,
       TREATMENT_PER_BOX: 24, SPECIAL_GUEST_PER_BOX: 12 / 20, BULK_EV_PER_BOX: 2.50,
+      SERIALIZED_PER_BOX: 1 / 6, // ~1 serialized card per case (6 boxes)
     };
   }
   if (productType === 'bundle') {
@@ -34,12 +37,14 @@ function getSlotModel(productType: string): SlotModel {
       PACKS: 10, MYTHIC_RATE: 1 / 8, RARE_RATE: 7 / 8,
       FOIL_PER_BOX: 10, FOIL_RARE_RATE: 0.085, FOIL_MYTHIC_RATE: 0.02,
       TREATMENT_PER_BOX: 10 / 7, SPECIAL_GUEST_PER_BOX: 10 / 45, BULK_EV_PER_BOX: 2.50,
+      SERIALIZED_PER_BOX: 0,
     };
   }
   return {
     PACKS: 36, MYTHIC_RATE: 1 / 8, RARE_RATE: 7 / 8,
     FOIL_PER_BOX: 36, FOIL_RARE_RATE: 0.085, FOIL_MYTHIC_RATE: 0.02,
     TREATMENT_PER_BOX: 36 / 7, SPECIAL_GUEST_PER_BOX: 36 / 45, BULK_EV_PER_BOX: 8.50,
+    SERIALIZED_PER_BOX: 0,
   };
 }
 
@@ -59,6 +64,10 @@ function artColors(name: string): [string, string] {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
   return ART_COLOR_PAIRS[h % ART_COLOR_PAIRS.length];
+}
+
+function isSerializedCard(card: ScryfallCard): boolean {
+  return (card.promo_types ?? []).includes('serialized');
 }
 
 function isTreatment(card: ScryfallCard): boolean {
@@ -115,7 +124,7 @@ export default async function handler(req: any, res: any) {
   const productType = ((req.query.productType as string | undefined) ?? 'play-booster-box').toLowerCase();
   const {
     PACKS, MYTHIC_RATE, RARE_RATE, FOIL_PER_BOX, FOIL_RARE_RATE, FOIL_MYTHIC_RATE,
-    TREATMENT_PER_BOX, SPECIAL_GUEST_PER_BOX, BULK_EV_PER_BOX,
+    TREATMENT_PER_BOX, SPECIAL_GUEST_PER_BOX, BULK_EV_PER_BOX, SERIALIZED_PER_BOX,
   } = getSlotModel(productType);
 
   let cards: ScryfallCard[];
@@ -136,8 +145,12 @@ export default async function handler(req: any, res: any) {
   const rares: ScryfallCard[] = [];
   const treatments: ScryfallCard[] = [];
   const specialGuests: ScryfallCard[] = [];
+  const serializedCards: ScryfallCard[] = [];
 
   for (const card of cards) {
+    // Serialized cards must be checked first — they often also have boosterfun/showcase
+    // promo_types, and they belong in their own low-odds bucket, not the treatment pool.
+    if (isSerializedCard(card)) { serializedCards.push(card); continue; }
     if (isSpecialGuest(card)) { specialGuests.push(card); continue; }
     if (isTreatment(card)) { treatments.push(card); continue; }
     if (card.rarity === 'mythic') mythics.push(card);
@@ -165,11 +178,17 @@ export default async function handler(req: any, res: any) {
     return (SPECIAL_GUEST_PER_BOX / specialGuests.length) * usd(card.prices.usd);
   }
 
+  function serializedEVContrib(card: ScryfallCard): number {
+    if (serializedCards.length === 0 || SERIALIZED_PER_BOX === 0) return 0;
+    return (SERIALIZED_PER_BOX / serializedCards.length) * usd(card.prices.usd);
+  }
+
   // ── Segment EVs ───────────────────────────────────────────────────────────
   const mythicEV = mythics.reduce((s, c) => s + mythicEVContrib(c), 0);
   const rareEV = rares.reduce((s, c) => s + rareEVContrib(c), 0);
   const treatmentEV = treatments.reduce((s, c) => s + treatmentEVContrib(c), 0);
   const specialGuestEV = specialGuests.reduce((s, c) => s + specialGuestEVContrib(c), 0);
+  const serializedEV = serializedCards.reduce((s, c) => s + serializedEVContrib(c), 0);
 
   // Foil EV: use foil prices where available, fall back to non-foil
   const allNonSpecial = [...mythics, ...rares];
@@ -183,7 +202,7 @@ export default async function handler(req: any, res: any) {
     FOIL_PER_BOX * FOIL_RARE_RATE * avgFoilRarePrice +
     FOIL_PER_BOX * FOIL_MYTHIC_RATE * avgFoilMythicPrice;
 
-  const totalEV = mythicEV + rareEV + foilEV + treatmentEV + specialGuestEV + BULK_EV_PER_BOX;
+  const totalEV = mythicEV + rareEV + foilEV + treatmentEV + specialGuestEV + serializedEV + BULK_EV_PER_BOX;
 
   // ── evSegments (only include segments with >0 EV) ─────────────────────────
   const rawSegments = [
@@ -192,6 +211,7 @@ export default async function handler(req: any, res: any) {
     { label: 'Foils',          ev: foilEV,         colorKey: 'foils' },
     { label: 'Showcase',       ev: treatmentEV,    colorKey: 'showcase' },
     { label: 'Special Guests', ev: specialGuestEV, colorKey: 'specialGuests' },
+    { label: 'Serialized',     ev: serializedEV,   colorKey: 'serialized' },
     { label: 'Bulk & Commons', ev: BULK_EV_PER_BOX, colorKey: 'bulk' },
   ].filter(s => s.ev > 0.01);
 
@@ -203,7 +223,7 @@ export default async function handler(req: any, res: any) {
   }));
 
   // ── Top hits sorted by EV contribution ───────────────────────────────────
-  type HitInput = { card: ScryfallCard; evContrib: number; pullsPer36: number };
+  type HitInput = { card: ScryfallCard; evContrib: number; pullsPer36: number; isSerialized?: boolean };
   const hitPool: HitInput[] = [
     ...mythics.map(c => ({
       card: c,
@@ -225,12 +245,24 @@ export default async function handler(req: any, res: any) {
       evContrib: specialGuestEVContrib(c),
       pullsPer36: specialGuests.length > 0 ? SPECIAL_GUEST_PER_BOX / specialGuests.length : 0,
     })),
+    // Serialized cards are always included regardless of EV — they are the headline chase hit
+    ...serializedCards.map(c => ({
+      card: c,
+      evContrib: serializedEVContrib(c),
+      pullsPer36: serializedCards.length > 0 ? SERIALIZED_PER_BOX / serializedCards.length : 0,
+      isSerialized: true,
+    })),
   ]
-    .filter(h => usd(h.card.prices.usd) > 0.50)
-    .sort((a, b) => b.evContrib - a.evContrib)
+    .filter(h => h.isSerialized || usd(h.card.prices.usd) > 0.50)
+    .sort((a, b) => {
+      // Serialized cards always sort to the top regardless of EV contribution
+      if (a.isSerialized && !b.isSerialized) return -1;
+      if (!a.isSerialized && b.isSerialized) return 1;
+      return b.evContrib - a.evContrib;
+    })
     .slice(0, 15);
 
-  const topHits = hitPool.map(({ card, evContrib, pullsPer36 }) => {
+  const topHits = hitPool.map(({ card, evContrib, pullsPer36, isSerialized }) => {
     const price = usd(card.prices.usd);
     const pullRatePerPack = pullsPer36 / PACKS;
     const pullRateOneIn = pullRatePerPack > 0 ? Math.round(1 / pullRatePerPack) : 0;
@@ -238,7 +270,7 @@ export default async function handler(req: any, res: any) {
     const rarity = card.rarity === 'mythic' ? 'M' : card.rarity === 'rare' ? 'R' : card.rarity === 'uncommon' ? 'U' : 'C';
     return {
       name: card.name,
-      rarity,
+      rarity: isSerialized ? 'S' : rarity,
       price: `$${price.toFixed(2)}`,
       pullRate: String(pullRateOneIn),
       pullPct: `${pullPct}%`,
@@ -259,6 +291,7 @@ export default async function handler(req: any, res: any) {
       rares: rares.length,
       treatments: treatments.length,
       specialGuests: specialGuests.length,
+      serialized: serializedCards.length,
     },
     lastUpdated: new Date().toISOString().split('T')[0],
   });

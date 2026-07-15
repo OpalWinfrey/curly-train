@@ -57,5 +57,6 @@ export const ChartColors = {
   foils: '#22C55E',
   showcase: '#8B5CF6',
   specialGuests: '#EC4899',
+  serialized: '#F59E0B',
   bulk: '#475569',
 } as const;
