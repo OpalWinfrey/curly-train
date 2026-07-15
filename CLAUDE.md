@@ -117,6 +117,6 @@ npx expo start --web    # web only
 npm run build           # builds web to dist/
 ```
 
-## Git branch convention
+## Git convention
 
-Claude works on branches named `claude/<slug>`. Always develop on the designated branch and push — don't leave uncommitted work. The `main` branch triggers auto-deploy to Vercel.
+Always commit and push directly to `main`. Do not create feature branches. The `main` branch triggers auto-deploy to Vercel.
