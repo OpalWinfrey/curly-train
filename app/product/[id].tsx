@@ -6,6 +6,7 @@ import { PlayBoosterDetail } from '../../components/detail/PlayBoosterDetail';
 import { CollectorBoosterDetail } from '../../components/detail/CollectorBoosterDetail';
 import { SecretLairDetail } from '../../components/detail/SecretLairDetail';
 import { BundleDetail } from '../../components/detail/BundleDetail';
+import { CommanderDeckDetail } from '../../components/detail/CommanderDeckDetail';
 import { Colors, Spacing, Radius } from '../../components/tokens';
 
 export default function ProductDetailScreen() {
@@ -55,7 +56,11 @@ export default function ProductDetailScreen() {
     return <BundleDetail product={product} />;
   }
 
-  // Commander decks and any other types: show price history + investment score only
+  if (product.productType === 'commander-deck') {
+    return <CommanderDeckDetail product={product} />;
+  }
+
+  // draft-booster-box, set-booster-box, and any future types fall through to play booster layout
   return <PlayBoosterDetail product={product} />;
 }
 
