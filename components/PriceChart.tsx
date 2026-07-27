@@ -36,6 +36,10 @@ export function PriceChart({ currentPrice, weekChange, priceHistory }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const chartWidth = windowWidth - 72;
 
+  // Detect synthetic flat history (all prices identical = no real data yet)
+  const isFlat = priceHistory.length === 0 ||
+    priceHistory.every(p => p.price === priceHistory[0].price);
+
   const prices = filterHistory(priceHistory, period);
   const minP = Math.min(...prices) - 2;
   const maxP = Math.max(...prices) + 2;
@@ -80,32 +84,42 @@ export function PriceChart({ currentPrice, weekChange, priceHistory }: Props) {
         </View>
       </View>
 
-      <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
-        <Defs>
-          <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={Colors.accent} stopOpacity="0.2" />
-            <Stop offset="1" stopColor={Colors.accent} stopOpacity="0" />
-          </LinearGradient>
-        </Defs>
-        {[1, 2, 3].map(i => (
-          <Path
-            key={i}
-            d={`M0,${padT + (i / 4) * (H - padT - padB)} L${W},${padT + (i / 4) * (H - padT - padB)}`}
-            stroke="rgba(255,255,255,0.035)"
-            strokeWidth={1}
-          />
-        ))}
-        <Path d={areaPath} fill="url(#areaGrad)" />
-        <Path d={linePath} fill="none" stroke={Colors.accent} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-        <Circle cx={lastX} cy={lastY} r={7} fill={Colors.accentGlow} />
-        <Circle cx={lastX} cy={lastY} r={3.5} fill={Colors.accent} />
-      </Svg>
+      {isFlat ? (
+        <View style={[styles.flatPlaceholder, { width: W, height: H }]}>
+          <Text style={styles.flatIcon}>📈</Text>
+          <Text style={styles.flatText}>Price history tracking</Text>
+          <Text style={styles.flatSub}>Historical data builds over time as live prices are recorded</Text>
+        </View>
+      ) : (
+        <>
+          <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
+            <Defs>
+              <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={Colors.accent} stopOpacity="0.2" />
+                <Stop offset="1" stopColor={Colors.accent} stopOpacity="0" />
+              </LinearGradient>
+            </Defs>
+            {[1, 2, 3].map(i => (
+              <Path
+                key={i}
+                d={`M0,${padT + (i / 4) * (H - padT - padB)} L${W},${padT + (i / 4) * (H - padT - padB)}`}
+                stroke="rgba(255,255,255,0.035)"
+                strokeWidth={1}
+              />
+            ))}
+            <Path d={areaPath} fill="url(#areaGrad)" />
+            <Path d={linePath} fill="none" stroke={Colors.accent} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+            <Circle cx={lastX} cy={lastY} r={7} fill={Colors.accentGlow} />
+            <Circle cx={lastX} cy={lastY} r={3.5} fill={Colors.accent} />
+          </Svg>
 
-      <View style={styles.axisRow}>
-        <Text style={styles.axisLabel}>{axisLeft}</Text>
-        <Text style={styles.axisLabel}>{axisMid}</Text>
-        <Text style={styles.axisLabel}>{axisRight}</Text>
-      </View>
+          <View style={styles.axisRow}>
+            <Text style={styles.axisLabel}>{axisLeft}</Text>
+            <Text style={styles.axisLabel}>{axisMid}</Text>
+            <Text style={styles.axisLabel}>{axisRight}</Text>
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -129,4 +143,8 @@ const styles = StyleSheet.create({
   periodTextActive: { color: Colors.accent },
   axisRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   axisLabel: { ...Typography.caption, color: Colors.text3, fontWeight: '500', fontVariant: ['tabular-nums'] },
+  flatPlaceholder: { alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0.6 },
+  flatIcon: { fontSize: 28 },
+  flatText: { fontSize: 13, fontWeight: '700', color: Colors.text2 },
+  flatSub: { fontSize: 11, color: Colors.text3, textAlign: 'center', lineHeight: 15, paddingHorizontal: 16 },
 });
