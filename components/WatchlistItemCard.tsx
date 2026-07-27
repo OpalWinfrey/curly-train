@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Colors, Radius, Spacing } from './tokens';
 import type { WatchlistItem, Product } from '../data/types';
+import { useUserState } from '../data/userState';
+import { formatPrice } from '../data/formatPrice';
 
 interface Props {
   item: WatchlistItem;
@@ -12,6 +14,8 @@ interface Props {
 }
 
 export function WatchlistItemCard({ item, product, onPress, onRemove, onMarkPurchased }: Props) {
+  const { preferences } = useUserState();
+  const { currency } = preferences;
   const current = product.currentMarketPrice;
   const target = item.targetPrice;
   const diff = current - target;
@@ -30,7 +34,7 @@ export function WatchlistItemCard({ item, product, onPress, onRemove, onMarkPurc
           <Text style={styles.setName}>{product.setName}</Text>
         </View>
         <View style={styles.priceCol}>
-          <Text style={styles.currentPrice}>${current.toFixed(2)}</Text>
+          <Text style={styles.currentPrice}>{formatPrice(current, currency)}</Text>
           <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
             <Text style={[styles.statusText, { color: statusColor }]}>
               {atOrBelowTarget ? '✓ At Target' : `${diffPct.toFixed(1)}% above`}
@@ -42,12 +46,12 @@ export function WatchlistItemCard({ item, product, onPress, onRemove, onMarkPurc
       <View style={styles.bottom}>
         <View style={styles.stat}>
           <Text style={styles.statLabel}>TARGET</Text>
-          <Text style={styles.statValue}>${target.toFixed(2)}</Text>
+          <Text style={styles.statValue}>{formatPrice(target, currency)}</Text>
         </View>
         <View style={styles.stat}>
           <Text style={styles.statLabel}>DIFFERENCE</Text>
           <Text style={[styles.statValue, { color: atOrBelowTarget ? Colors.success : Colors.danger }]}>
-            {diff >= 0 ? '+' : ''}${diff.toFixed(2)}
+            {diff >= 0 ? '+' : ''}{formatPrice(diff, currency)}
           </Text>
         </View>
         <View style={styles.stat}>

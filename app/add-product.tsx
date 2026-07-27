@@ -10,7 +10,10 @@ import { useRouter } from 'expo-router';
 import { SearchBar } from '../components/SearchBar';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
+import { formatPrice } from '../data/formatPrice';
 import type { Product, Condition } from '../data/types';
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type Step = 'search' | 'destination' | 'collection-details' | 'watchlist-details' | 'confirm';
 
@@ -18,7 +21,8 @@ const CONDITIONS: Condition[] = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 
 export default function AddProductScreen() {
   const router = useRouter();
-  const { products, addToCollection, addToWatchlist } = useUserState();
+  const { products, addToCollection, addToWatchlist, preferences } = useUserState();
+  const { currency } = preferences;
 
   const [step, setStep] = useState<Step>('search');
   const [query, setQuery] = useState('');
@@ -36,6 +40,9 @@ export default function AddProductScreen() {
   const [targetPrice, setTargetPrice] = useState('');
   const [watchNotes, setWatchNotes] = useState('');
 
+  // Validation errors
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const searchResults = query.trim()
     ? products.filter(p =>
         p.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -50,13 +57,38 @@ export default function AddProductScreen() {
     setStep('destination');
   }
 
+  function validateCollection(): boolean {
+    const errs: Record<string, string> = {};
+    const qty = parseInt(quantity);
+    if (!quantity || isNaN(qty) || qty < 1) errs.quantity = 'Enter a valid quantity (1 or more)';
+    const price = parseFloat(purchasePrice);
+    if (!purchasePrice || isNaN(price) || price < 0) errs.purchasePrice = 'Enter a valid price';
+    if (!DATE_RE.test(purchaseDate)) errs.purchaseDate = 'Use YYYY-MM-DD format (e.g. 2024-09-15)';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  function validateWatchlist(): boolean {
+    const errs: Record<string, string> = {};
+    const price = parseFloat(targetPrice);
+    if (!targetPrice || isNaN(price) || price <= 0) errs.targetPrice = 'Enter a valid target price';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  function handleAdvanceToConfirm() {
+    if (destination === 'collection' && !validateCollection()) return;
+    if (destination === 'watchlist' && !validateWatchlist()) return;
+    setStep('confirm');
+  }
+
   function handleSave() {
     if (!selectedProduct) return;
     if (destination === 'collection') {
       addToCollection({
         productId: selectedProduct.id,
-        quantity: parseInt(quantity) || 1,
-        purchasePrice: parseFloat(purchasePrice) || selectedProduct.currentMarketPrice,
+        quantity: Math.max(1, parseInt(quantity)),
+        purchasePrice: parseFloat(purchasePrice),
         purchaseDate,
         condition,
         notes,
@@ -64,7 +96,7 @@ export default function AddProductScreen() {
     } else if (destination === 'watchlist') {
       addToWatchlist({
         productId: selectedProduct.id,
-        targetPrice: parseFloat(targetPrice) || selectedProduct.currentMarketPrice,
+        targetPrice: parseFloat(targetPrice),
         dateAdded: new Date().toISOString().split('T')[0],
         notes: watchNotes,
       });
@@ -128,7 +160,7 @@ export default function AddProductScreen() {
                     <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
                     <Text style={styles.resultMeta}>{item.setName}</Text>
                   </View>
-                  <Text style={styles.resultPrice}>${item.currentMarketPrice.toFixed(2)}</Text>
+                  <Text style={styles.resultPrice}>{formatPrice(item.currentMarketPrice, currency)}</Text>
                   <Text style={styles.resultArrow}>›</Text>
                 </Pressable>
               )}
@@ -186,18 +218,20 @@ export default function AddProductScreen() {
               </View>
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>PURCHASE PRICE</Text>
-                <View style={styles.inputWrap}>
+                <View style={[styles.inputWrap, errors.purchasePrice ? styles.inputError : null]}>
                   <Text style={styles.currSign}>$</Text>
-                  <TextInput style={styles.textInput} value={purchasePrice} onChangeText={setPurchasePrice} keyboardType="decimal-pad" selectTextOnFocus />
+                  <TextInput style={styles.textInput} value={purchasePrice} onChangeText={v => { setPurchasePrice(v); setErrors(e => ({ ...e, purchasePrice: '' })); }} keyboardType="decimal-pad" selectTextOnFocus />
                 </View>
+                {errors.purchasePrice ? <Text style={styles.errorText}>{errors.purchasePrice}</Text> : null}
               </View>
             </View>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>PURCHASE DATE</Text>
-              <View style={styles.inputWrap}>
-                <TextInput style={styles.textInput} value={purchaseDate} onChangeText={setPurchaseDate} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.text3} />
+              <View style={[styles.inputWrap, errors.purchaseDate ? styles.inputError : null]}>
+                <TextInput style={styles.textInput} value={purchaseDate} onChangeText={v => { setPurchaseDate(v); setErrors(e => ({ ...e, purchaseDate: '' })); }} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.text3} />
               </View>
+              {errors.purchaseDate ? <Text style={styles.errorText}>{errors.purchaseDate}</Text> : null}
             </View>
 
             <View style={styles.field}>
@@ -218,7 +252,7 @@ export default function AddProductScreen() {
               </View>
             </View>
 
-            <Pressable onPress={() => setStep('confirm')} style={styles.nextBtn}>
+            <Pressable onPress={handleAdvanceToConfirm} style={styles.nextBtn}>
               <Text style={styles.nextBtnText}>Review & Save →</Text>
             </Pressable>
           </ScrollView>
@@ -239,10 +273,11 @@ export default function AddProductScreen() {
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>TARGET PRICE</Text>
-              <View style={styles.inputWrap}>
+              <View style={[styles.inputWrap, errors.targetPrice ? styles.inputError : null]}>
                 <Text style={styles.currSign}>$</Text>
-                <TextInput style={styles.textInput} value={targetPrice} onChangeText={setTargetPrice} keyboardType="decimal-pad" autoFocus selectTextOnFocus />
+                <TextInput style={styles.textInput} value={targetPrice} onChangeText={v => { setTargetPrice(v); setErrors(e => ({ ...e, targetPrice: '' })); }} keyboardType="decimal-pad" autoFocus selectTextOnFocus />
               </View>
+              {errors.targetPrice ? <Text style={styles.errorText}>{errors.targetPrice}</Text> : null}
               {parseFloat(targetPrice) > 0 && selectedProduct.currentMarketPrice > 0 && (
                 <Text style={[styles.targetHint, parseFloat(targetPrice) <= selectedProduct.currentMarketPrice ? styles.hintGood : styles.hintBad]}>
                   {parseFloat(targetPrice) <= selectedProduct.currentMarketPrice
@@ -259,7 +294,7 @@ export default function AddProductScreen() {
               </View>
             </View>
 
-            <Pressable onPress={() => setStep('confirm')} style={styles.nextBtn}>
+            <Pressable onPress={handleAdvanceToConfirm} style={styles.nextBtn}>
               <Text style={styles.nextBtnText}>Review & Save →</Text>
             </Pressable>
           </ScrollView>
@@ -280,18 +315,18 @@ export default function AddProductScreen() {
                 <>
                   <ConfirmRow label="Adding to" value="Collection" />
                   <ConfirmRow label="Quantity" value={quantity} />
-                  <ConfirmRow label="Purchase Price" value={`$${purchasePrice} each`} />
+                  <ConfirmRow label="Purchase Price" value={`${formatPrice(parseFloat(purchasePrice), currency)} each`} />
                   <ConfirmRow label="Purchase Date" value={purchaseDate} />
                   <ConfirmRow label="Condition" value={condition} />
                   {notes ? <ConfirmRow label="Notes" value={notes} /> : null}
                   <View style={styles.divider} />
-                  <ConfirmRow label="Total Invested" value={`$${((parseFloat(purchasePrice) || 0) * (Math.max(1, parseInt(quantity) || 1))).toFixed(2)}`} highlight />
+                  <ConfirmRow label="Total Invested" value={formatPrice(parseFloat(purchasePrice) * Math.max(1, parseInt(quantity)), currency)} highlight />
                 </>
               ) : (
                 <>
                   <ConfirmRow label="Adding to" value="Watchlist" />
-                  <ConfirmRow label="Target Price" value={`$${targetPrice}`} />
-                  <ConfirmRow label="Current Price" value={`$${selectedProduct.currentMarketPrice.toFixed(2)}`} />
+                  <ConfirmRow label="Target Price" value={formatPrice(parseFloat(targetPrice), currency)} />
+                  <ConfirmRow label="Current Price" value={formatPrice(selectedProduct.currentMarketPrice, currency)} />
                   {watchNotes ? <ConfirmRow label="Notes" value={watchNotes} /> : null}
                 </>
               )}
@@ -398,4 +433,6 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: Colors.border2, marginVertical: 8 },
   saveBtn: { backgroundColor: Colors.success, borderRadius: Radius.lg, height: 56, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.sm },
   saveBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  inputError: { borderColor: Colors.danger },
+  errorText: { fontSize: 11, color: Colors.danger, marginTop: 4, fontWeight: '600' },
 });

@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radius, Spacing } from './tokens';
 import type { Product } from '../data/types';
 import { useProductArt } from '../data/scryfall';
+import { useUserState } from '../data/userState';
+import { formatPrice } from '../data/formatPrice';
 
 const TYPE_LABELS: Record<string, string> = {
   'play-booster-box':      'Play Booster Box',
@@ -42,6 +44,8 @@ export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOw
   const [artError, setArtError] = useState(false);
   const firstHit = product.playBoosterHits?.[0] ?? product.collectorBoosterHits?.[0];
   const artUrl = useProductArt(product.setCode, firstHit?.name);
+  const { preferences } = useUserState();
+  const { currency } = preferences;
 
   return (
     <Pressable onPress={onPress} style={[styles.card, compact && styles.compact]}>
@@ -73,7 +77,7 @@ export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOw
         <View style={styles.priceRow}>
           {product.currentMarketPrice > 0 ? (
             <>
-              <Text style={styles.price}>${product.currentMarketPrice.toFixed(2)}</Text>
+              <Text style={styles.price}>{formatPrice(product.currentMarketPrice, currency)}</Text>
               <View style={[styles.changePill, changePositive ? styles.pillUp : styles.pillDown]}>
                 <Text style={[styles.changeText, changePositive ? styles.textUp : styles.textDown]}>
                   {changePositive ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%

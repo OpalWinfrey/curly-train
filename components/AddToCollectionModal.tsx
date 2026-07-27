@@ -6,6 +6,8 @@ import {
 import { Colors, Radius, Spacing } from './tokens';
 import type { Product, Condition } from '../data/types';
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 interface Props {
   visible: boolean;
   product: Product | null;
@@ -21,17 +23,25 @@ export function AddToCollectionModal({ visible, product, onClose, onSave }: Prop
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [condition, setCondition] = useState<Condition>('NM');
   const [notes, setNotes] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (!product) return null;
 
   function handleSave() {
-    const qty = parseInt(quantity) || 1;
-    const purchasePrice = parseFloat(price) || product!.currentMarketPrice;
+    const errs: Record<string, string> = {};
+    const qty = parseInt(quantity);
+    if (!quantity || isNaN(qty) || qty < 1) errs.quantity = 'Must be 1 or more';
+    const purchasePrice = parseFloat(price);
+    if (!price || isNaN(purchasePrice) || purchasePrice < 0) errs.price = 'Enter a valid price';
+    if (!DATE_RE.test(date)) errs.date = 'Use YYYY-MM-DD format';
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
     onSave(qty, purchasePrice, date, condition, notes);
     setQuantity('1');
     setPrice('');
     setNotes('');
     setCondition('NM');
+    setErrors({});
   }
 
   return (
@@ -66,32 +76,34 @@ export function AddToCollectionModal({ visible, product, onClose, onSave }: Prop
 
               <View style={styles.field}>
                 <Text style={styles.label}>PURCHASE PRICE</Text>
-                <View style={styles.inputWrap}>
+                <View style={[styles.inputWrap, errors.price ? styles.inputError : null]}>
                   <Text style={styles.currencySign}>$</Text>
                   <TextInput
                     style={styles.input}
                     value={price}
-                    onChangeText={setPrice}
+                    onChangeText={v => { setPrice(v); setErrors(e => ({ ...e, price: '' })); }}
                     placeholder={product.currentMarketPrice.toFixed(2)}
                     placeholderTextColor={Colors.text3}
                     keyboardType="decimal-pad"
                     selectTextOnFocus
                   />
                 </View>
+                {errors.price ? <Text style={styles.errorText}>{errors.price}</Text> : null}
               </View>
             </View>
 
             <View style={styles.field}>
               <Text style={styles.label}>PURCHASE DATE</Text>
-              <View style={styles.inputWrap}>
+              <View style={[styles.inputWrap, errors.date ? styles.inputError : null]}>
                 <TextInput
                   style={styles.input}
                   value={date}
-                  onChangeText={setDate}
+                  onChangeText={v => { setDate(v); setErrors(e => ({ ...e, date: '' })); }}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor={Colors.text3}
                 />
               </View>
+              {errors.date ? <Text style={styles.errorText}>{errors.date}</Text> : null}
             </View>
 
             <View style={styles.field}>
@@ -210,6 +222,8 @@ const styles = StyleSheet.create({
   condActive: { backgroundColor: 'rgba(139,92,246,0.18)', borderColor: Colors.accent },
   condText: { fontSize: 12, fontWeight: '700', color: Colors.text3 },
   condTextActive: { color: Colors.accent },
+  inputError: { borderColor: Colors.danger },
+  errorText: { fontSize: 11, color: Colors.danger, marginTop: 3, fontWeight: '600' },
   footer: {
     flexDirection: 'row',
     gap: Spacing.md,

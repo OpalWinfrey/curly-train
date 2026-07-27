@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, Text, StyleSheet, SafeAreaView, Pressable, StatusBar } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, SafeAreaView, Pressable, StatusBar, Share, Alert } from 'react-native';
 
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
@@ -32,8 +32,24 @@ const SELLING_FEES = [10, 12.9, 15];
 const TAX_RATES = [0, 15, 25];
 
 export default function SettingsScreen() {
-  const { preferences, updatePreferences } = useUserState();
+  const { preferences, updatePreferences, collection, products } = useUserState();
   const { currency, marketplace, sellingFeePct, taxRatePct } = preferences;
+
+  async function exportCSV() {
+    if (collection.length === 0) {
+      Alert.alert('Nothing to export', 'Add some products to your collection first.');
+      return;
+    }
+    const header = 'Product ID,Name,Quantity,Purchase Price,Purchase Date,Condition,Notes';
+    const rows = collection.map(item => {
+      const product = products.find(p => p.id === item.productId);
+      const name = (product?.name ?? '').replace(/"/g, '""');
+      const notes = (item.notes ?? '').replace(/"/g, '""');
+      return `${item.productId},"${name}",${item.quantity},${item.purchasePrice},${item.purchaseDate},${item.condition ?? ''},"${notes}"`;
+    });
+    const csv = [header, ...rows].join('\n');
+    await Share.share({ title: 'VaultMark Collection', message: csv });
+  }
 
   function cycleCurrency() {
     const next = CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length];
@@ -123,13 +139,13 @@ export default function SettingsScreen() {
           <View style={styles.divider} />
           <SettingRow
             label="Export Collection"
-            onPress={() => {}}
-            note="Export as CSV (coming soon)"
+            onPress={exportCSV}
+            note={`Export ${collection.length} item${collection.length !== 1 ? 's' : ''} as CSV`}
           />
           <View style={styles.divider} />
           <SettingRow
             label="Import Collection"
-            onPress={() => {}}
+            onPress={() => Alert.alert('Coming Soon', 'CSV import will be available in a future update.')}
             note="Import from CSV (coming soon)"
           />
         </SettingSection>

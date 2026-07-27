@@ -11,7 +11,6 @@ import { WatchlistItemCard } from '../components/WatchlistItemCard';
 import { EmptyState } from '../components/EmptyState';
 import { AddToCollectionModal } from '../components/AddToCollectionModal';
 import { Colors, Spacing, Radius } from '../components/tokens';
-import { PRODUCTS } from '../data/products';
 import { useUserState } from '../data/userState';
 import { formatPrice } from '../data/formatPrice';
 import type { Condition, CollectionItem, WatchlistItem, Product } from '../data/types';
@@ -21,7 +20,7 @@ type SortKey = 'value' | 'pnl' | 'name' | 'date';
 
 export default function VaultScreen() {
   const router = useRouter();
-  const { collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading, preferences } = useUserState();
+  const { products, collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading, preferences } = useUserState();
   const { sellingFeePct, taxRatePct, currency } = preferences;
   const [segment, setSegment] = useState<Segment>('owned');
   const [sort, setSort] = useState<SortKey>('value');
@@ -30,7 +29,7 @@ export default function VaultScreen() {
 
   // — Collection logic —
   const enrichedCollection = collection
-    .map(item => ({ item, product: PRODUCTS.find(p => p.id === item.productId)! }))
+    .map(item => ({ item, product: products.find(p => p.id === item.productId)! }))
     .filter(e => e.product != null);
 
   const sortedCollection = [...enrichedCollection].sort((a, b) => {
@@ -66,7 +65,7 @@ export default function VaultScreen() {
 
   // — Watchlist logic —
   const enrichedWatchlist = watchlist
-    .map(wItem => ({ wItem, product: PRODUCTS.find(p => p.id === wItem.productId)! }))
+    .map(wItem => ({ wItem, product: products.find(p => p.id === wItem.productId)! }))
     .filter(e => e.product != null);
   const atTarget = enrichedWatchlist.filter(e => e.product.currentMarketPrice <= e.wItem.targetPrice);
   const aboveTarget = enrichedWatchlist.filter(e => e.product.currentMarketPrice > e.wItem.targetPrice);
