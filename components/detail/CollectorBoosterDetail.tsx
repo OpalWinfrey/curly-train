@@ -75,7 +75,10 @@ export function CollectorBoosterDetail({ product }: Props) {
 
   const setLines = product.setName.split(':');
   const title = setLines.length > 1 ? `${setLines[0]}:\n${setLines[1].trim()}` : product.setName;
-  const heroImageUrl = useProductArt(product.setCode, product.collectorBoosterHits?.[0]?.name) ?? undefined;
+  const scryfallArt = useProductArt(product.setCode, product.collectorBoosterHits?.[0]?.name) ?? undefined;
+  const heroImageUrl = product.tcgplayerProductId
+    ? `https://product-images.tcgplayer.com/fit-in/437x437/${product.tcgplayerProductId}.jpg`
+    : scryfallArt;
 
   return (
     <SafeAreaView style={styles.safe}>

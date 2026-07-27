@@ -8,7 +8,8 @@ export function makeHistory(current: number, trend: 'up' | 'down' | 'flat') {
   for (let i = 29; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const noise = (Math.random() - 0.5) * 6;
+    // flat = no noise, so PriceChart can detect synthetic data and show a placeholder
+    const noise = trend === 'flat' ? 0 : (Math.random() - 0.5) * 6;
     let drift = 0;
     if (trend === 'up') drift = ((29 - i) / 29) * 15;
     if (trend === 'down') drift = -((29 - i) / 29) * 12;

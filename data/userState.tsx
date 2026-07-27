@@ -90,6 +90,9 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
 
       const priceById = new Map<string, number>();
       const priceByTypeKey = new Map<string, number>();
+      let pricedExpanded: Product[] = [];
+      let expandedKeys = new Set<string>();
+
       try {
         if (manapoolListings.status === 'rejected') throw manapoolListings.reason;
         const priced = buildProductCatalog(manapoolListings.value, sets);
@@ -97,13 +100,21 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
           priceById.set(p.id, p.currentMarketPrice);
           priceByTypeKey.set(`${p.setCode.toLowerCase()}-${p.productType}`, p.currentMarketPrice);
         }
+        // Find setCode+productType pairs with multiple Manapool entries (individual commander decks)
+        const pricedKeyCount = new Map<string, number>();
+        for (const p of priced) {
+          const key = `${p.setCode.toLowerCase()}-${p.productType}`;
+          pricedKeyCount.set(key, (pricedKeyCount.get(key) ?? 0) + 1);
+        }
+        expandedKeys = new Set([...pricedKeyCount.entries()].filter(([, n]) => n > 1).map(([k]) => k));
+        pricedExpanded = priced.filter(p => expandedKeys.has(`${p.setCode.toLowerCase()}-${p.productType}`));
       } catch (err) {
         console.warn('[VaultMark] Manapool price fetch failed, products will show Price N/A:', err);
       }
 
       const staticKeys = new Set(PRODUCTS.map(p => `${p.setCode}-${p.productType}`));
       const extra = scryfallCatalog
-        .filter(p => !staticKeys.has(`${p.setCode}-${p.productType}`))
+        .filter(p => !staticKeys.has(`${p.setCode}-${p.productType}`) && !expandedKeys.has(`${p.setCode.toLowerCase()}-${p.productType}`))
         .map(p => {
           const price = priceById.get(p.id) ?? priceByTypeKey.get(`${p.setCode.toLowerCase()}-${p.productType}`);
           return price != null && price > 0
@@ -111,7 +122,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
             : p;
         });
 
-      setProducts([...PRODUCTS, ...extra]);
+      setProducts([...PRODUCTS, ...extra, ...pricedExpanded]);
     } catch (err) {
       console.warn('[VaultMark] Scryfall fetch failed, using static catalog:', err);
     } finally {

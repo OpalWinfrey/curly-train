@@ -41,9 +41,14 @@ export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOw
   const gradColors = TYPE_COLORS[product.productType] ?? ['#1a1a3a', '#060610'];
   const priceChange = product.priceChangePct;
   const changePositive = priceChange >= 0;
+  const [tcgError, setTcgError] = useState(false);
   const [artError, setArtError] = useState(false);
   const firstHit = product.playBoosterHits?.[0] ?? product.collectorBoosterHits?.[0];
-  const artUrl = useProductArt(product.setCode, firstHit?.name);
+  const scryfallArtUrl = useProductArt(product.setCode, firstHit?.name);
+  const tcgUrl = product.tcgplayerProductId
+    ? `https://product-images.tcgplayer.com/fit-in/437x437/${product.tcgplayerProductId}.jpg`
+    : null;
+  const artUrl = (tcgUrl && !tcgError) ? tcgUrl : scryfallArtUrl;
   const { preferences } = useUserState();
   const { currency } = preferences;
 
@@ -57,7 +62,9 @@ export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOw
             source={{ uri: artUrl }}
             style={[StyleSheet.absoluteFill, { opacity: 0.65 }]}
             resizeMode="cover"
-            onError={() => setArtError(true)}
+            onError={() => {
+              if (tcgUrl && !tcgError) { setTcgError(true); } else { setArtError(true); }
+            }}
           />
         )}
         {isOwned && <View style={styles.ownedDot} />}
