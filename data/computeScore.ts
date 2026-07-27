@@ -1,6 +1,6 @@
 import type { Product, LiveEVData, Recommendation, ScoreBar } from './types';
 
-function evRatioScore(ev: number, price: number): number {
+export function evRatioScore(ev: number, price: number): number {
   if (price <= 0) return 2;
   const ratio = ev / price;
   if (ratio >= 1.3) return 25;
@@ -10,7 +10,7 @@ function evRatioScore(ev: number, price: number): number {
   return 2;
 }
 
-function setQualityScore(evData: LiveEVData): number {
+export function setQualityScore(evData: LiveEVData): number {
   const total = evData.expectedValue;
   if (total <= 0) return 5;
   const highValueAmt = evData.evSegments
@@ -23,7 +23,7 @@ function setQualityScore(evData: LiveEVData): number {
   return 5;
 }
 
-function chaseCeilingScore(evData: LiveEVData): number {
+export function chaseCeilingScore(evData: LiveEVData): number {
   const topPrice = evData.topHits[0] ? parseFloat(evData.topHits[0].price.replace('$', '')) : 0;
   if (topPrice >= 50) return 25;
   if (topPrice >= 25) return 18;
@@ -31,7 +31,7 @@ function chaseCeilingScore(evData: LiveEVData): number {
   return 4;
 }
 
-function timingScore(releaseDate: string): number {
+export function timingScore(releaseDate: string): number {
   if (!releaseDate) return 10;
   const months = (Date.now() - new Date(releaseDate).getTime()) / (1000 * 60 * 60 * 24 * 30);
   if (months >= 3 && months < 12) return 25;
@@ -40,7 +40,7 @@ function timingScore(releaseDate: string): number {
   return 10;
 }
 
-function toRecommendation(score: number): Recommendation {
+export function toRecommendation(score: number): Recommendation {
   if (score >= 70) return 'BUY';
   if (score >= 50) return 'HOLD';
   if (score >= 30) return 'WAIT';

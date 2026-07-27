@@ -117,6 +117,7 @@ export function buildProductCatalog(
       priceChangeWeek: 0,
       priceChangePct: 0,
       priceHistory: makeHistory(price, 'flat'),
+      tcgplayerProductId: listing.tcgplayer_product_id > 0 ? listing.tcgplayer_product_id : undefined,
     });
   }
 

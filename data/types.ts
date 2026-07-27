@@ -95,6 +95,7 @@ export interface Product {
   priceChangeWeek: number;
   priceChangePct: number;
   priceHistory: PricePoint[];
+  tcgplayerProductId?: number;
   expectedValue?: number;
   investmentScore?: number;
   recommendation?: Recommendation;

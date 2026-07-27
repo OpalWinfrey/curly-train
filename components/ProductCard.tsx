@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Radius, Spacing } from './tokens';
 import type { Product } from '../data/types';
 import { useProductArt } from '../data/scryfall';
+import { useUserState } from '../data/userState';
+import { formatPrice } from '../data/formatPrice';
 
 const TYPE_LABELS: Record<string, string> = {
   'play-booster-box':      'Play Booster Box',
@@ -39,9 +41,16 @@ export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOw
   const gradColors = TYPE_COLORS[product.productType] ?? ['#1a1a3a', '#060610'];
   const priceChange = product.priceChangePct;
   const changePositive = priceChange >= 0;
+  const [tcgError, setTcgError] = useState(false);
   const [artError, setArtError] = useState(false);
   const firstHit = product.playBoosterHits?.[0] ?? product.collectorBoosterHits?.[0];
-  const artUrl = useProductArt(product.setCode, firstHit?.name);
+  const scryfallArtUrl = useProductArt(product.setCode, firstHit?.name);
+  const tcgUrl = product.tcgplayerProductId
+    ? `https://product-images.tcgplayer.com/fit-in/437x437/${product.tcgplayerProductId}.jpg`
+    : null;
+  const artUrl = (tcgUrl && !tcgError) ? tcgUrl : scryfallArtUrl;
+  const { preferences } = useUserState();
+  const { currency } = preferences;
 
   return (
     <Pressable onPress={onPress} style={[styles.card, compact && styles.compact]}>
@@ -53,7 +62,9 @@ export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOw
             source={{ uri: artUrl }}
             style={[StyleSheet.absoluteFill, { opacity: 0.65 }]}
             resizeMode="cover"
-            onError={() => setArtError(true)}
+            onError={() => {
+              if (tcgUrl && !tcgError) { setTcgError(true); } else { setArtError(true); }
+            }}
           />
         )}
         {isOwned && <View style={styles.ownedDot} />}
@@ -73,7 +84,7 @@ export function ProductCard({ product, onPress, onWatchlist, isWatchlisted, isOw
         <View style={styles.priceRow}>
           {product.currentMarketPrice > 0 ? (
             <>
-              <Text style={styles.price}>${product.currentMarketPrice.toFixed(2)}</Text>
+              <Text style={styles.price}>{formatPrice(product.currentMarketPrice, currency)}</Text>
               <View style={[styles.changePill, changePositive ? styles.pillUp : styles.pillDown]}>
                 <Text style={[styles.changeText, changePositive ? styles.textUp : styles.textDown]}>
                   {changePositive ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
