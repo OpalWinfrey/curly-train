@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, View, Text, StyleSheet, SafeAreaView, Pressable, StatusBar } from 'react-native';
 
 import { Colors, Spacing, Radius } from '../components/tokens';
+import { useUserState } from '../data/userState';
 
 function SettingRow({ label, value, onPress, note }: { label: string; value?: string; onPress?: () => void; note?: string }) {
   return (
@@ -25,11 +26,33 @@ function SettingSection({ title, children }: { title: string; children: React.Re
   );
 }
 
+const CURRENCIES = ['USD', 'EUR', 'GBP'];
+const MARKETPLACES = ['TCGPlayer', 'CardMarket', 'eBay'];
+const SELLING_FEES = [10, 12.9, 15];
+const TAX_RATES = [0, 15, 25];
+
 export default function SettingsScreen() {
-  const [currency, setCurrency] = useState('USD');
-  const [marketplace, setMarketplace] = useState('TCGPlayer');
-  const [sellingFee, setSellingFee] = useState('12.9%');
-  const [taxEstimate, setTaxEstimate] = useState('0%');
+  const { preferences, updatePreferences } = useUserState();
+  const { currency, marketplace, sellingFeePct, taxRatePct } = preferences;
+
+  function cycleCurrency() {
+    const next = CURRENCIES[(CURRENCIES.indexOf(currency) + 1) % CURRENCIES.length];
+    updatePreferences({ currency: next });
+  }
+  function cycleMarketplace() {
+    const next = MARKETPLACES[(MARKETPLACES.indexOf(marketplace) + 1) % MARKETPLACES.length];
+    updatePreferences({ marketplace: next });
+  }
+  function cycleSellingFee() {
+    const idx = SELLING_FEES.indexOf(sellingFeePct);
+    const next = SELLING_FEES[(idx === -1 ? 1 : idx + 1) % SELLING_FEES.length];
+    updatePreferences({ sellingFeePct: next });
+  }
+  function cycleTaxRate() {
+    const idx = TAX_RATES.indexOf(taxRatePct);
+    const next = TAX_RATES[(idx === -1 ? 0 : idx + 1) % TAX_RATES.length];
+    updatePreferences({ taxRatePct: next });
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -41,7 +64,7 @@ export default function SettingsScreen() {
         </View>
         <View>
           <Text style={styles.username}>Collector</Text>
-          <Text style={styles.version}>VaultMark · Mock Data Mode</Text>
+          <Text style={styles.version}>VaultMark · Live Prices</Text>
         </View>
       </View>
 
@@ -51,13 +74,13 @@ export default function SettingsScreen() {
           <SettingRow
             label="Currency"
             value={currency}
-            onPress={() => setCurrency(c => c === 'USD' ? 'EUR' : c === 'EUR' ? 'GBP' : 'USD')}
+            onPress={cycleCurrency}
           />
           <View style={styles.divider} />
           <SettingRow
             label="Preferred Marketplace"
             value={marketplace}
-            onPress={() => setMarketplace(m => m === 'TCGPlayer' ? 'CardMarket' : m === 'CardMarket' ? 'eBay' : 'TCGPlayer')}
+            onPress={cycleMarketplace}
           />
           <View style={styles.divider} />
           <SettingRow
@@ -70,15 +93,16 @@ export default function SettingsScreen() {
         <SettingSection title="Financial Settings">
           <SettingRow
             label="Selling Fee Assumption"
-            value={sellingFee}
-            onPress={() => setSellingFee(f => f === '12.9%' ? '10%' : f === '10%' ? '15%' : '12.9%')}
-            note="Used in profit/loss calculations"
+            value={`${sellingFeePct}%`}
+            onPress={cycleSellingFee}
+            note="Applied to net P&L calculations"
           />
           <View style={styles.divider} />
           <SettingRow
             label="Default Tax Estimate"
-            value={taxEstimate}
-            onPress={() => setTaxEstimate(t => t === '0%' ? '15%' : t === '15%' ? '25%' : '0%')}
+            value={`${taxRatePct}%`}
+            onPress={cycleTaxRate}
+            note="Applied to capital gains"
           />
         </SettingSection>
 
@@ -113,7 +137,7 @@ export default function SettingsScreen() {
         <SettingSection title="About">
           <SettingRow label="Version" value="1.0.0 (Alpha)" />
           <View style={styles.divider} />
-          <SettingRow label="Data last updated" value="Mock data" />
+          <SettingRow label="Price Source" value="Manapool" />
           <View style={styles.divider} />
           <SettingRow
             label="Send Feedback"
@@ -123,7 +147,7 @@ export default function SettingsScreen() {
 
         <View style={styles.disclaimer}>
           <Text style={styles.disclaimerText}>
-            VaultMark uses mock data for demonstration purposes. Market prices shown are illustrative and not real-time data. Always verify prices on TCGPlayer or CardMarket before making purchasing decisions.
+            Market prices are sourced from Manapool and updated every 5 minutes. Currency conversion rates are approximate. Always verify prices before making purchasing decisions.
           </Text>
         </View>
 

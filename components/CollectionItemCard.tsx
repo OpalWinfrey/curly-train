@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Colors, Radius, Spacing } from './tokens';
+import { useUserState } from '../data/userState';
+import { formatPrice } from '../data/formatPrice';
 import type { CollectionItem, Product } from '../data/types';
 
 interface Props {
@@ -11,24 +13,32 @@ interface Props {
 }
 
 export function CollectionItemCard({ item, product, onPress, onRemove }: Props) {
+  const { preferences } = useUserState();
+  const { currency, sellingFeePct, taxRatePct } = preferences;
+
   const currentValue = product.currentMarketPrice * item.quantity;
   const totalPaid = item.purchasePrice * item.quantity;
-  const pnl = currentValue - totalPaid;
+  const netProceeds = currentValue * (1 - sellingFeePct / 100);
+  const afterFeePnl = netProceeds - totalPaid;
+  const pnl = taxRatePct > 0 && afterFeePnl > 0
+    ? afterFeePnl * (1 - taxRatePct / 100)
+    : afterFeePnl;
   const pnlPct = totalPaid > 0 ? (pnl / totalPaid) * 100 : 0;
   const isPositive = pnl >= 0;
+  const showNetLabel = sellingFeePct > 0 || taxRatePct > 0;
 
   return (
     <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.top}>
         <View style={styles.nameCol}>
           <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
-          <Text style={styles.meta}>Qty {item.quantity} · Paid ${item.purchasePrice.toFixed(2)} each</Text>
+          <Text style={styles.meta}>Qty {item.quantity} · Paid {formatPrice(item.purchasePrice, currency)} each</Text>
         </View>
         <View style={styles.valueCol}>
-          <Text style={styles.currentValue}>${currentValue.toFixed(2)}</Text>
+          <Text style={styles.currentValue}>{formatPrice(currentValue, currency)}</Text>
           <View style={[styles.pnlPill, isPositive ? styles.pillUp : styles.pillDown]}>
             <Text style={[styles.pnlText, isPositive ? styles.textUp : styles.textDown]}>
-              {isPositive ? '+' : ''}${pnl.toFixed(2)} ({isPositive ? '+' : ''}{pnlPct.toFixed(1)}%)
+              {isPositive ? '+' : ''}{formatPrice(pnl, currency)} ({isPositive ? '+' : ''}{pnlPct.toFixed(1)}%)
             </Text>
           </View>
         </View>
@@ -37,14 +47,14 @@ export function CollectionItemCard({ item, product, onPress, onRemove }: Props) 
       <View style={styles.bottom}>
         <View style={styles.stat}>
           <Text style={styles.statLabel}>INVESTED</Text>
-          <Text style={styles.statValue}>${totalPaid.toFixed(2)}</Text>
+          <Text style={styles.statValue}>{formatPrice(totalPaid, currency)}</Text>
         </View>
         <View style={styles.stat}>
           <Text style={styles.statLabel}>MARKET PRICE</Text>
-          <Text style={styles.statValue}>${product.currentMarketPrice.toFixed(2)}</Text>
+          <Text style={styles.statValue}>{formatPrice(product.currentMarketPrice, currency)}</Text>
         </View>
         <View style={styles.stat}>
-          <Text style={styles.statLabel}>RETURN</Text>
+          <Text style={styles.statLabel}>{showNetLabel ? 'NET RETURN' : 'RETURN'}</Text>
           <Text style={[styles.statValue, isPositive ? styles.textUp : styles.textDown]}>
             {isPositive ? '+' : ''}{pnlPct.toFixed(1)}%
           </Text>

@@ -13,6 +13,7 @@ import { AddToCollectionModal } from '../components/AddToCollectionModal';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { PRODUCTS } from '../data/products';
 import { useUserState } from '../data/userState';
+import { formatPrice } from '../data/formatPrice';
 import type { Condition, CollectionItem, WatchlistItem, Product } from '../data/types';
 
 type Segment = 'owned' | 'watching';
@@ -20,7 +21,8 @@ type SortKey = 'value' | 'pnl' | 'name' | 'date';
 
 export default function VaultScreen() {
   const router = useRouter();
-  const { collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading } = useUserState();
+  const { collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading, preferences } = useUserState();
+  const { sellingFeePct, taxRatePct, currency } = preferences;
   const [segment, setSegment] = useState<Segment>('owned');
   const [sort, setSort] = useState<SortKey>('value');
   const [editItem, setEditItem] = useState<{ item: CollectionItem; product: Product } | null>(null);
@@ -45,8 +47,14 @@ export default function VaultScreen() {
 
   const totalValue = enrichedCollection.reduce((s, e) => s + e.product.currentMarketPrice * e.item.quantity, 0);
   const totalInvested = enrichedCollection.reduce((s, e) => s + e.item.purchasePrice * e.item.quantity, 0);
-  const totalPnl = totalValue - totalInvested;
+  const grossPnl = totalValue - totalInvested;
+  const netProceeds = totalValue * (1 - sellingFeePct / 100);
+  const afterFeePnl = netProceeds - totalInvested;
+  const totalPnl = taxRatePct > 0 && afterFeePnl > 0
+    ? afterFeePnl * (1 - taxRatePct / 100)
+    : afterFeePnl;
   const pnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
+  const showNetLabel = sellingFeePct > 0 || taxRatePct > 0;
 
   const sortedByPct = [...enrichedCollection].sort((a, b) => {
     const ap = ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100;
@@ -142,16 +150,16 @@ export default function VaultScreen() {
               <>
                 <LinearGradient colors={['#1a0840', '#0d0420', Colors.bg]} style={s.summaryCard}>
                   <Text style={s.summaryLabel}>Total Collection Value</Text>
-                  <Text style={s.summaryValue}>${totalValue.toFixed(2)}</Text>
+                  <Text style={s.summaryValue}>{formatPrice(totalValue, currency)}</Text>
                   <View style={s.summaryRow}>
                     <View style={s.summaryStat}>
                       <Text style={s.summaryStatLabel}>Invested</Text>
-                      <Text style={s.summaryStatValue}>${totalInvested.toFixed(2)}</Text>
+                      <Text style={s.summaryStatValue}>{formatPrice(totalInvested, currency)}</Text>
                     </View>
                     <View style={s.summaryStat}>
-                      <Text style={s.summaryStatLabel}>Gain/Loss</Text>
+                      <Text style={s.summaryStatLabel}>{showNetLabel ? 'Net Gain/Loss' : 'Gain/Loss'}</Text>
                       <Text style={[s.summaryStatValue, totalPnl >= 0 ? s.textUp : s.textDown]}>
-                        {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)} ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
+                        {totalPnl >= 0 ? '+' : ''}{formatPrice(totalPnl, currency)} ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
                       </Text>
                     </View>
                     <View style={s.summaryStat}>

@@ -12,9 +12,10 @@ import { SectionHeader } from '../components/SectionHeader';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
 import { useProductArt } from '../data/scryfall';
+import { formatPrice } from '../data/formatPrice';
 import type { Product } from '../data/types';
 
-function ReleaseCard({ product, onPress }: { product: Product; onPress: () => void }) {
+function ReleaseCard({ product, onPress, currency }: { product: Product; onPress: () => void; currency: string }) {
   const [imgError, setImgError] = useState(false);
   const gradColors: [string, string] = product.productType === 'secret-lair'
     ? ['#4a1a80', '#1a0535']
@@ -45,7 +46,7 @@ function ReleaseCard({ product, onPress }: { product: Product; onPress: () => vo
       </View>
       <View style={styles.releaseInfo}>
         <Text style={styles.releaseName} numberOfLines={2}>{product.name}</Text>
-        <Text style={styles.releasePrice}>${product.currentMarketPrice.toFixed(2)}</Text>
+        <Text style={styles.releasePrice}>{formatPrice(product.currentMarketPrice, currency)}</Text>
       </View>
     </Pressable>
   );
@@ -54,7 +55,8 @@ function ReleaseCard({ product, onPress }: { product: Product; onPress: () => vo
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { products, collection, watchlist, recentlyViewed, isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
+  const { products, collection, watchlist, recentlyViewed, isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem, preferences } = useUserState();
+  const { currency } = preferences;
 
   const totalValue = collection.reduce((sum, item) => {
     const product = products.find(p => p.id === item.productId);
@@ -124,15 +126,15 @@ export default function HomeScreen() {
             {hasCollection && (
               <View style={[styles.gainPill, unrealizedGain >= 0 ? styles.pillUp : styles.pillDown]}>
                 <Text style={[styles.gainText, unrealizedGain >= 0 ? styles.textUp : styles.textDown]}>
-                  {unrealizedGain >= 0 ? '▲' : '▼'} ${Math.abs(unrealizedGain).toFixed(2)}
+                  {unrealizedGain >= 0 ? '▲' : '▼'} {formatPrice(Math.abs(unrealizedGain), currency)}
                 </Text>
               </View>
             )}
           </View>
-          <Text style={styles.portfolioValue}>${totalValue.toFixed(2)}</Text>
+          <Text style={styles.portfolioValue}>{formatPrice(totalValue, currency)}</Text>
           {hasCollection ? (
             <View style={styles.portfolioMeta}>
-              <Text style={styles.portfolioMetaText}>${totalInvested.toFixed(2)} invested · {collection.length} product{collection.length !== 1 ? 's' : ''}</Text>
+              <Text style={styles.portfolioMetaText}>{formatPrice(totalInvested, currency)} invested · {collection.length} product{collection.length !== 1 ? 's' : ''}</Text>
             </View>
           ) : (
             <Text style={styles.portfolioEmpty}>Add products to track your collection value</Text>
@@ -152,7 +154,7 @@ export default function HomeScreen() {
                 return (
                   <Pressable key={product.id} onPress={() => router.push(`/product/${product.id}`)} style={styles.watchChip}>
                     <Text style={styles.watchChipName} numberOfLines={1}>{product.name}</Text>
-                    <Text style={styles.watchChipPrice}>${product.currentMarketPrice.toFixed(2)}</Text>
+                    <Text style={styles.watchChipPrice}>{formatPrice(product.currentMarketPrice, currency)}</Text>
                     {atTarget && <Text style={styles.watchChipAt}>✓ At Target</Text>}
                   </Pressable>
                 );
@@ -189,7 +191,7 @@ export default function HomeScreen() {
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
             {newReleaseProducts.map(product => (
-              <ReleaseCard key={product.id} product={product} onPress={() => router.push(`/product/${product.id}`)} />
+              <ReleaseCard key={product.id} product={product} onPress={() => router.push(`/product/${product.id}`)} currency={currency} />
             ))}
           </ScrollView>
         </View>
