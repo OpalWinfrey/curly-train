@@ -56,7 +56,7 @@ function ReleaseCard({ product, onPress, currency }: { product: Product; onPress
 export default function HomeScreen() {
   const router = useRouter();
   const { products, collection, watchlist, recentlyViewed, isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem, preferences } = useUserState();
-  const { currency } = preferences;
+  const { currency, sellingFeePct, taxRatePct } = preferences;
 
   const totalValue = collection.reduce((sum, item) => {
     const product = products.find(p => p.id === item.productId);
@@ -64,7 +64,9 @@ export default function HomeScreen() {
   }, 0);
 
   const totalInvested = collection.reduce((sum, item) => sum + item.purchasePrice * item.quantity, 0);
-  const unrealizedGain = totalValue - totalInvested;
+  const netProceeds = totalValue * (1 - sellingFeePct / 100);
+  const afterFeePnl = netProceeds - totalInvested;
+  const unrealizedGain = taxRatePct > 0 && afterFeePnl > 0 ? afterFeePnl * (1 - taxRatePct / 100) : afterFeePnl;
   const hasCollection = collection.length > 0;
 
   const recentProducts = recentlyViewed
