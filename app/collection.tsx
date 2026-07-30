@@ -12,6 +12,7 @@ import { SectionHeader } from '../components/SectionHeader';
 import { AddToCollectionModal } from '../components/AddToCollectionModal';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
+import { formatPrice } from '../data/formatPrice';
 import type { Condition, CollectionItem, Product } from '../data/types';
 
 type SortKey = 'value' | 'pnl' | 'name' | 'date';
@@ -22,7 +23,8 @@ function calcPnlPct(marketPrice: number, purchasePrice: number): number {
 
 export default function CollectionScreen() {
   const router = useRouter();
-  const { products, collection, removeFromCollection, updateCollectionItem } = useUserState();
+  const { products, collection, removeFromCollection, updateCollectionItem, preferences } = useUserState();
+  const { currency, sellingFeePct, taxRatePct } = preferences;
   const [sort, setSort] = useState<SortKey>('value');
   const [editItem, setEditItem] = useState<{ item: CollectionItem; product: Product } | null>(null);
 
@@ -44,8 +46,11 @@ export default function CollectionScreen() {
 
   const totalValue = enriched.reduce((s, e) => s + e.product.currentMarketPrice * e.item.quantity, 0);
   const totalInvested = enriched.reduce((s, e) => s + e.item.purchasePrice * e.item.quantity, 0);
-  const totalPnl = totalValue - totalInvested;
+  const netProceeds = totalValue * (1 - sellingFeePct / 100);
+  const afterFeePnl = netProceeds - totalInvested;
+  const totalPnl = taxRatePct > 0 && afterFeePnl > 0 ? afterFeePnl * (1 - taxRatePct / 100) : afterFeePnl;
   const pnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
+  const showNetLabel = sellingFeePct > 0 || taxRatePct > 0;
 
   const best = [...enriched].sort((a, b) =>
     calcPnlPct(b.product.currentMarketPrice, b.item.purchasePrice) -
@@ -105,16 +110,16 @@ export default function CollectionScreen() {
             {/* Summary */}
             <LinearGradient colors={['#1a0840', '#0d0420', Colors.bg]} style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Total Collection Value</Text>
-              <Text style={styles.summaryValue}>${totalValue.toFixed(2)}</Text>
+              <Text style={styles.summaryValue}>{formatPrice(totalValue, currency)}</Text>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryStat}>
                   <Text style={styles.summaryStatLabel}>Invested</Text>
-                  <Text style={styles.summaryStatValue}>${totalInvested.toFixed(2)}</Text>
+                  <Text style={styles.summaryStatValue}>{formatPrice(totalInvested, currency)}</Text>
                 </View>
                 <View style={styles.summaryStat}>
-                  <Text style={styles.summaryStatLabel}>Gain/Loss</Text>
+                  <Text style={styles.summaryStatLabel}>{showNetLabel ? 'Net P&L' : 'Gain/Loss'}</Text>
                   <Text style={[styles.summaryStatValue, totalPnl >= 0 ? styles.textUp : styles.textDown]}>
-                    {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)} ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
+                    {totalPnl >= 0 ? '+' : ''}{formatPrice(totalPnl, currency)} ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
                   </Text>
                 </View>
                 <View style={styles.summaryStat}>
