@@ -13,7 +13,15 @@ const COLOR_MAP: Record<string, string> = {
   bulk: ChartColors.bulk,
 };
 
-const cache = new Map<string, LiveEVData>();
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const cache = new Map<string, { data: LiveEVData; ts: number }>();
+
+function getCached(key: string): LiveEVData | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) { cache.delete(key); return null; }
+  return entry.data;
+}
 
 function apiType(productType: string): string {
   if (productType === 'play-booster-case') return 'play-booster-box';
@@ -24,11 +32,12 @@ function apiType(productType: string): string {
 export function useSetEV(setCode: string, productType = 'play-booster-box'): { loading: boolean; evData: LiveEVData | null } {
   const normalizedType = apiType(productType);
   const key = `${setCode.toUpperCase()}:${normalizedType}`;
-  const [loading, setLoading] = useState(!cache.has(key));
-  const [evData, setEvData] = useState<LiveEVData | null>(cache.get(key) ?? null);
+  const cached = getCached(key);
+  const [loading, setLoading] = useState(cached === null);
+  const [evData, setEvData] = useState<LiveEVData | null>(cached);
 
   useEffect(() => {
-    if (cache.has(key)) return;
+    if (getCached(key) !== null) return;
     let active = true;
     setLoading(true);
 
@@ -44,7 +53,7 @@ export function useSetEV(setCode: string, productType = 'play-booster-box'): { l
             color: COLOR_MAP[s.colorKey] ?? ChartColors.bulk,
           })),
         };
-        cache.set(key, enriched);
+        cache.set(key, { data: enriched, ts: Date.now() });
         setEvData(enriched);
       })
       .catch(() => {/* silently degrade to static data */})

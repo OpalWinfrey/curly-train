@@ -13,21 +13,21 @@ export function scryfallCardArt(name: string): string {
 // Products without a curated "hit" card (all bulk-imported Scryfall/Manapool
 // products) fall back to the priciest card in their set as cover art.
 // Cached per set code since many products (booster box, bundle, etc.) share one.
-const setArtCache = new Map<string, Promise<string | null>>();
+const ART_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const setArtCache = new Map<string, { promise: Promise<string | null>; ts: number }>();
 
 function fetchSetArt(setCode: string): Promise<string | null> {
   const key = setCode.toUpperCase();
-  let promise = setArtCache.get(key);
-  if (!promise) {
-    promise = fetch(`https://api.scryfall.com/cards/search?q=e%3A${encodeURIComponent(key)}&order=usd&dir=desc&unique=cards`)
-      .then(res => (res.ok ? res.json() : null))
-      .then((data: { data?: Array<{ image_uris?: { art_crop?: string }; card_faces?: Array<{ image_uris?: { art_crop?: string } }> }> } | null) => {
-        const card = data?.data?.[0];
-        return card?.image_uris?.art_crop ?? card?.card_faces?.[0]?.image_uris?.art_crop ?? null;
-      })
-      .catch(() => null);
-    setArtCache.set(key, promise);
-  }
+  const entry = setArtCache.get(key);
+  if (entry && Date.now() - entry.ts <= ART_CACHE_TTL_MS) return entry.promise;
+  const promise = fetch(`https://api.scryfall.com/cards/search?q=e%3A${encodeURIComponent(key)}&order=usd&dir=desc&unique=cards`)
+    .then(res => (res.ok ? res.json() : null))
+    .then((data: { data?: Array<{ image_uris?: { art_crop?: string }; card_faces?: Array<{ image_uris?: { art_crop?: string } }> }> } | null) => {
+      const card = data?.data?.[0];
+      return card?.image_uris?.art_crop ?? card?.card_faces?.[0]?.image_uris?.art_crop ?? null;
+    })
+    .catch(() => null);
+  setArtCache.set(key, { promise, ts: Date.now() });
   return promise;
 }
 

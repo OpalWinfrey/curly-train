@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, Pressable,
-  StatusBar, FlatList, ActivityIndicator,
+  StatusBar, FlatList, ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -74,16 +74,24 @@ export default function VaultScreen() {
     ...aboveTarget.map(e => ({ ...e, atTarget: false })),
   ];
 
-  function handleUpdateItem(qty: number, price: number, date: string, condition: Condition, notes: string) {
+  async function handleUpdateItem(qty: number, price: number, date: string, condition: Condition, notes: string) {
     if (!editItem) return;
-    updateCollectionItem(editItem.item.id, { quantity: qty, purchasePrice: price, purchaseDate: date, condition, notes });
-    setEditItem(null);
+    try {
+      await updateCollectionItem(editItem.item.id, { quantity: qty, purchasePrice: price, purchaseDate: date, condition, notes });
+      setEditItem(null);
+    } catch (err) {
+      Alert.alert('Save Failed', err instanceof Error ? err.message : 'Could not update item. Please try again.');
+    }
   }
 
-  function handleMarkPurchased(qty: number, price: number, date: string, condition: Condition, notes: string) {
+  async function handleMarkPurchased(qty: number, price: number, date: string, condition: Condition, notes: string) {
     if (!purchaseItem) return;
-    moveWatchlistToCollection(purchaseItem.wItem.id, price, qty, date, notes, condition);
-    setPurchaseItem(null);
+    try {
+      await moveWatchlistToCollection(purchaseItem.wItem.id, price, qty, date, notes, condition);
+      setPurchaseItem(null);
+    } catch (err) {
+      Alert.alert('Save Failed', err instanceof Error ? err.message : 'Could not move item to collection. Please try again.');
+    }
   }
 
   if (isLoading) {
@@ -210,7 +218,7 @@ export default function VaultScreen() {
                 item={e.item}
                 product={e.product}
                 onPress={() => setEditItem(e)}
-                onRemove={() => removeFromCollection(e.item.id)}
+                onRemove={() => removeFromCollection(e.item.id).catch(err => Alert.alert('Remove Failed', err instanceof Error ? err.message : 'Could not remove item.'))}
               />
             )}
             ItemSeparatorComponent={() => <View style={{ height: Spacing.sm }} />}
@@ -246,7 +254,7 @@ export default function VaultScreen() {
                 item={e.wItem}
                 product={e.product}
                 onPress={() => router.push(`/product/${e.product.id}`)}
-                onRemove={() => removeFromWatchlist(e.wItem.id)}
+                onRemove={() => removeFromWatchlist(e.wItem.id).catch(err => Alert.alert('Remove Failed', err instanceof Error ? err.message : 'Could not remove item.'))}
                 onMarkPurchased={() => setPurchaseItem({ wItem: e.wItem, product: e.product })}
               />
             )}

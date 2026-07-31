@@ -114,7 +114,14 @@ async function fetchAllCards(setCode: string): Promise<ScryfallCard[]> {
   return cards;
 }
 
-export default async function handler(req: any, res: any) {
+interface Req { method?: string; query: Record<string, string | string[]> }
+interface Res { status(c: number): Res; json(d: unknown): void; setHeader(k: string, v: string): void }
+
+export default async function handler(req: Req, res: Res) {
+  if (req.method && req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
   const setCode = (req.query.setCode as string | undefined)?.toUpperCase();
   if (!setCode) {
     res.status(400).json({ error: 'Missing setCode' });
