@@ -81,7 +81,7 @@ export function InvestmentScore({ score, grade, description, bars }: Props) {
 
         {/* Details */}
         <View style={styles.details}>
-          <Text style={styles.grade}>{grade}</Text>
+          <Text style={[styles.grade, { color: score >= 75 ? Colors.success : score >= 50 ? Colors.warning : Colors.danger }]}>{grade}</Text>
           <Text style={styles.description}>{description}</Text>
           <View style={styles.bars}>
             {bars.map(bar => (
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   gaugeMax: { fontSize: 11, color: Colors.text3, fontWeight: '500' },
   details: { flex: 1 },
-  grade: { fontSize: 20, fontWeight: '700', letterSpacing: -0.5, color: Colors.success, marginBottom: 4 },
+  grade: { fontSize: 20, fontWeight: '700', letterSpacing: -0.5, marginBottom: 4 },
   description: { ...Typography.caption, color: Colors.text2, lineHeight: 16, marginBottom: 12 },
   bars: { gap: 7 },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

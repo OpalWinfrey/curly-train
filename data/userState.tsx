@@ -29,7 +29,7 @@ interface UserState {
   addToWatchlist: (item: Omit<WatchlistItem, 'id' | 'userId'>) => Promise<void>;
   updateWatchlistItem: (id: string, updates: Partial<WatchlistItem>) => Promise<void>;
   removeFromWatchlist: (id: string) => Promise<void>;
-  moveWatchlistToCollection: (watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string) => Promise<void>;
+  moveWatchlistToCollection: (watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string, condition?: CollectionItem['condition']) => Promise<void>;
   updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void>;
   addRecentlyViewed: (productId: string) => void;
   isInCollection: (productId: string) => boolean;
@@ -152,6 +152,9 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
         });
       }
       setIsLoading(false);
+    }).catch(err => {
+      console.warn('[VaultMark] Failed to load user data:', err);
+      setIsLoading(false);
     });
   }, [userId]);
 
@@ -162,6 +165,8 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
       const updates = {
         quantity: existing.quantity + item.quantity,
         purchase_price: item.purchasePrice,
+        purchase_date: item.purchaseDate,
+        condition: item.condition,
         notes: item.notes ?? existing.notes,
       };
       const { data } = await supabase
@@ -230,11 +235,11 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
   const moveWatchlistToCollection = useCallback(async (
-    watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string
+    watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string, condition: CollectionItem['condition'] = 'NM'
   ) => {
     const wItem = watchlist.find(w => w.id === watchlistId);
     if (!wItem) return;
-    await addToCollection({ productId: wItem.productId, quantity, purchasePrice, purchaseDate, notes, condition: 'NM' });
+    await addToCollection({ productId: wItem.productId, quantity, purchasePrice, purchaseDate, notes, condition });
     await removeFromWatchlist(watchlistId);
   }, [watchlist, addToCollection, removeFromWatchlist]);
 

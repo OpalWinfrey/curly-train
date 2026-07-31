@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
-  Pressable, StatusBar,
+  Pressable, StatusBar, Share,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -93,7 +93,7 @@ export function BundleDetail({ product }: Props) {
           <Pressable onPress={() => setShowWatchlistModal(true)} style={styles.navBtn} hitSlop={8}>
             <Text style={[styles.navBtnIcon, inWatchlist && { color: Colors.danger }]}>{inWatchlist ? '♥' : '♡'}</Text>
           </Pressable>
-          <Pressable style={styles.navBtn} hitSlop={8}><Text style={styles.navBtnIcon}>↑</Text></Pressable>
+          <Pressable style={styles.navBtn} hitSlop={8} onPress={() => Share.share({ title: product.name, message: `${product.name} — ${product.currentMarketPrice > 0 ? '$' + product.currentMarketPrice.toFixed(2) : 'Price N/A'} | VaultMark` })}><Text style={styles.navBtnIcon}>↑</Text></Pressable>
         </View>
       </View>
 

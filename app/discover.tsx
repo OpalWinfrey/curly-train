@@ -92,7 +92,7 @@ export default function DiscoverScreen() {
 
       <View style={styles.header}>
         <Text style={styles.title}>Discover</Text>
-        <Text style={styles.subtitle}>{products.length} products</Text>
+        <Text style={styles.subtitle}>{filtered.length} product{filtered.length !== 1 ? 's' : ''}</Text>
       </View>
 
       <View style={styles.searchWrap}>

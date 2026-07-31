@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, Pressable, TextInput,
   ScrollView, KeyboardAvoidingView, Platform,
@@ -8,16 +8,25 @@ import type { Product, Condition } from '../data/types';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+interface InitialValues {
+  quantity: number;
+  purchasePrice: number;
+  purchaseDate: string;
+  condition: Condition;
+  notes: string;
+}
+
 interface Props {
   visible: boolean;
   product: Product | null;
+  initialValues?: InitialValues;
   onClose: () => void;
   onSave: (quantity: number, purchasePrice: number, purchaseDate: string, condition: Condition, notes: string) => void;
 }
 
 const CONDITIONS: Condition[] = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 
-export function AddToCollectionModal({ visible, product, onClose, onSave }: Props) {
+export function AddToCollectionModal({ visible, product, initialValues, onClose, onSave }: Props) {
   const [quantity, setQuantity] = useState('1');
   const [price, setPrice] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -25,7 +34,20 @@ export function AddToCollectionModal({ visible, product, onClose, onSave }: Prop
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    if (visible) {
+      setQuantity(initialValues ? String(initialValues.quantity) : '1');
+      setPrice(initialValues ? String(initialValues.purchasePrice) : '');
+      setDate(initialValues ? initialValues.purchaseDate : new Date().toISOString().split('T')[0]);
+      setCondition(initialValues ? initialValues.condition : 'NM');
+      setNotes(initialValues ? (initialValues.notes ?? '') : '');
+      setErrors({});
+    }
+  }, [visible, initialValues]);
+
   if (!product) return null;
+
+  const isEdit = !!initialValues;
 
   function handleSave() {
     const errs: Record<string, string> = {};
@@ -37,11 +59,6 @@ export function AddToCollectionModal({ visible, product, onClose, onSave }: Prop
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     onSave(qty, purchasePrice, date, condition, notes);
-    setQuantity('1');
-    setPrice('');
-    setNotes('');
-    setCondition('NM');
-    setErrors({});
   }
 
   return (
@@ -50,7 +67,7 @@ export function AddToCollectionModal({ visible, product, onClose, onSave }: Prop
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Add to Collection</Text>
+          <Text style={styles.title}>{isEdit ? 'Edit Item' : 'Add to Collection'}</Text>
           <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
@@ -58,7 +75,7 @@ export function AddToCollectionModal({ visible, product, onClose, onSave }: Prop
               <View style={styles.field}>
                 <Text style={styles.label}>QUANTITY</Text>
                 <View style={styles.qtyRow}>
-                  <Pressable onPress={() => setQuantity((q: string) => String(Math.max(1, parseInt(q) - 1)))} style={styles.qtyBtn}>
+                  <Pressable onPress={() => setQuantity((q: string) => String(Math.max(1, (parseInt(q) || 1) - 1)))} style={styles.qtyBtn}>
                     <Text style={styles.qtyBtnText}>−</Text>
                   </Pressable>
                   <TextInput
@@ -68,7 +85,7 @@ export function AddToCollectionModal({ visible, product, onClose, onSave }: Prop
                     keyboardType="number-pad"
                     selectTextOnFocus
                   />
-                  <Pressable onPress={() => setQuantity((q: string) => String(parseInt(q) + 1))} style={styles.qtyBtn}>
+                  <Pressable onPress={() => setQuantity((q: string) => String((parseInt(q) || 1) + 1))} style={styles.qtyBtn}>
                     <Text style={styles.qtyBtnText}>+</Text>
                   </Pressable>
                 </View>
@@ -140,7 +157,7 @@ export function AddToCollectionModal({ visible, product, onClose, onSave }: Prop
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
             <Pressable onPress={handleSave} style={styles.saveBtn}>
-              <Text style={styles.saveText}>Add to Collection</Text>
+              <Text style={styles.saveText}>{isEdit ? 'Save Changes' : 'Add to Collection'}</Text>
             </Pressable>
           </View>
         </View>

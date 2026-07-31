@@ -207,11 +207,11 @@ export default function AddProductScreen() {
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>QUANTITY</Text>
                 <View style={styles.qtyRow}>
-                  <Pressable onPress={() => setQuantity(q => String(Math.max(1, parseInt(q) - 1)))} style={styles.qtyBtn}>
+                  <Pressable onPress={() => setQuantity(q => String(Math.max(1, (parseInt(q) || 1) - 1)))} style={styles.qtyBtn}>
                     <Text style={styles.qtyBtnText}>−</Text>
                   </Pressable>
                   <TextInput style={styles.qtyInput} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" selectTextOnFocus />
-                  <Pressable onPress={() => setQuantity(q => String(parseInt(q) + 1))} style={styles.qtyBtn}>
+                  <Pressable onPress={() => setQuantity(q => String((parseInt(q) || 1) + 1))} style={styles.qtyBtn}>
                     <Text style={styles.qtyBtnText}>+</Text>
                   </Pressable>
                 </View>

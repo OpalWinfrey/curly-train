@@ -56,8 +56,8 @@ export default function VaultScreen() {
   const showNetLabel = sellingFeePct > 0 || taxRatePct > 0;
 
   const sortedByPct = [...enrichedCollection].sort((a, b) => {
-    const ap = ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100;
-    const bp = ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100;
+    const ap = a.item.purchasePrice > 0 ? ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100 : 0;
+    const bp = b.item.purchasePrice > 0 ? ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100 : 0;
     return bp - ap;
   });
   const best = sortedByPct[0];
@@ -80,9 +80,9 @@ export default function VaultScreen() {
     setEditItem(null);
   }
 
-  function handleMarkPurchased(qty: number, price: number, date: string, _condition: Condition, notes: string) {
+  function handleMarkPurchased(qty: number, price: number, date: string, condition: Condition, notes: string) {
     if (!purchaseItem) return;
-    moveWatchlistToCollection(purchaseItem.wItem.id, price, qty, date, notes);
+    moveWatchlistToCollection(purchaseItem.wItem.id, price, qty, date, notes, condition);
     setPurchaseItem(null);
   }
 
@@ -178,7 +178,7 @@ export default function VaultScreen() {
                         <Text style={[s.performerBadge, { color: accent }]}>{label}</Text>
                         <Text style={s.performerName} numberOfLines={1}>{e.product.name}</Text>
                         <Text style={[s.performerPct, { color: accent }]}>
-                          {(() => { const p = ((e.product.currentMarketPrice - e.item.purchasePrice) / e.item.purchasePrice) * 100; return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`; })()}
+                          {(() => { const p = e.item.purchasePrice > 0 ? ((e.product.currentMarketPrice - e.item.purchasePrice) / e.item.purchasePrice) * 100 : 0; return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`; })()}
                         </Text>
                       </View>
                     ) : null)}
@@ -250,6 +250,13 @@ export default function VaultScreen() {
       <AddToCollectionModal
         visible={editItem !== null}
         product={editItem?.product ?? null}
+        initialValues={editItem ? {
+          quantity: editItem.item.quantity,
+          purchasePrice: editItem.item.purchasePrice,
+          purchaseDate: editItem.item.purchaseDate,
+          condition: editItem.item.condition,
+          notes: editItem.item.notes ?? '',
+        } : undefined}
         onClose={() => setEditItem(null)}
         onSave={handleUpdateItem}
       />

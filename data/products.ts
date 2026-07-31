@@ -13,7 +13,7 @@ export function makeHistory(current: number, trend: 'up' | 'down' | 'flat') {
     let drift = 0;
     if (trend === 'up') drift = ((29 - i) / 29) * 15;
     if (trend === 'down') drift = -((29 - i) / 29) * 12;
-    pts.push({ date: d.toISOString().split('T')[0], price: Math.round((base - 15 + drift + noise) * 100) / 100 });
+    pts.push({ date: d.toISOString().split('T')[0], price: Math.max(0.01, Math.round((base - 15 + drift + noise) * 100) / 100) });
   }
   pts.push({ date: new Date().toISOString().split('T')[0], price: current });
   return pts;

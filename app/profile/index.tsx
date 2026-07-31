@@ -6,7 +6,6 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/authContext';
 import { useUserState } from '../../data/userState';
-import { PRODUCTS } from '../../data/products';
 import { Colors, Spacing, Radius } from '../../components/tokens';
 import type { UserProfile } from '../../data/types';
 
@@ -36,7 +35,7 @@ function Div() { return <View style={ps.divider} />; }
 
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
-  const { collection, preferences, updatePreferences } = useUserState();
+  const { collection, products, preferences, updatePreferences } = useUserState();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState('');
@@ -91,15 +90,15 @@ export default function ProfileScreen() {
   async function handleShare() {
     const uname = username.trim().toLowerCase();
     if (!uname) { Alert.alert('Set a username first to get a shareable link.'); return; }
-    const url = `vaultmark://profile/${uname}`;
-    const totalValue = collection
+    const url = `https://vaultmark-sealed.vercel.app`;
+    const shareValue = collection
       .reduce((s, item) => {
-        const p = PRODUCTS.find(p => p.id === item.productId);
+        const p = products.find(pr => pr.id === item.productId);
         return s + (p ? p.currentMarketPrice * item.quantity : 0);
       }, 0);
     await Share.share({
       title: 'My VaultMark Profile',
-      message: `Check out my MTG collection on VaultMark!\n\n${collection.length} product${collection.length !== 1 ? 's' : ''} · $${totalValue.toFixed(2)} value\n\n${url}`,
+      message: `Check out my MTG collection on VaultMark!\n\n${collection.length} product${collection.length !== 1 ? 's' : ''} · $${shareValue.toFixed(2)} value\n\n${url}`,
     });
   }
 
@@ -115,7 +114,7 @@ export default function ProfileScreen() {
   }
 
   const totalValue = collection.reduce((s, item) => {
-    const p = PRODUCTS.find(pr => pr.id === item.productId);
+    const p = products.find(pr => pr.id === item.productId);
     return s + (p ? p.currentMarketPrice * item.quantity : 0);
   }, 0);
   const totalInvested = collection.reduce((s, item) => s + item.purchasePrice * item.quantity, 0);
