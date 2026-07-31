@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, Pressable, TextInput,
   KeyboardAvoidingView, Platform,
@@ -16,14 +16,25 @@ interface Props {
 export function AddToWatchlistModal({ visible, product, onClose, onSave }: Props) {
   const [targetPrice, setTargetPrice] = useState('');
   const [notes, setNotes] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      setTargetPrice('');
+      setNotes('');
+      setError('');
+    }
+  }, [visible]);
 
   if (!product) return null;
 
   function handleSave() {
-    const price = parseFloat(targetPrice) || product!.currentMarketPrice;
+    const price = parseFloat(targetPrice);
+    if (!targetPrice || isNaN(price) || price <= 0) {
+      setError('Enter a valid target price');
+      return;
+    }
     onSave(price, notes);
-    setTargetPrice('');
-    setNotes('');
   }
 
   const diffFromCurrent = product.currentMarketPrice - (parseFloat(targetPrice) || 0);
@@ -46,12 +57,12 @@ export function AddToWatchlistModal({ visible, product, onClose, onSave }: Props
           <View style={styles.form}>
             <View style={styles.field}>
               <Text style={styles.label}>TARGET PRICE</Text>
-              <View style={styles.inputWrap}>
+              <View style={[styles.inputWrap, error ? styles.inputError : null]}>
                 <Text style={styles.currencySign}>$</Text>
                 <TextInput
                   style={styles.input}
                   value={targetPrice}
-                  onChangeText={setTargetPrice}
+                  onChangeText={v => { setTargetPrice(v); setError(''); }}
                   placeholder={product.currentMarketPrice.toFixed(2)}
                   placeholderTextColor={Colors.text3}
                   keyboardType="decimal-pad"
@@ -59,6 +70,7 @@ export function AddToWatchlistModal({ visible, product, onClose, onSave }: Props
                   selectTextOnFocus
                 />
               </View>
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
               {hasValidTarget && (
                 <Text style={[styles.hint, diffFromCurrent >= 0 ? styles.hintGood : styles.hintBad]}>
                   {diffFromCurrent >= 0
@@ -152,6 +164,8 @@ const styles = StyleSheet.create({
   hint: { fontSize: 11, fontWeight: '600', marginTop: 5 },
   hintGood: { color: Colors.success },
   hintBad: { color: Colors.warning },
+  inputError: { borderColor: Colors.danger },
+  errorText: { fontSize: 11, color: Colors.danger, marginTop: 3, fontWeight: '600' },
   footer: {
     flexDirection: 'row',
     gap: Spacing.md,

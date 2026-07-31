@@ -1,3 +1,4 @@
+import { Colors } from '../components/tokens';
 import type { Product, LiveEVData, Recommendation, ScoreBar } from './types';
 
 export function evRatioScore(ev: number, price: number): number {
@@ -79,10 +80,10 @@ export function computeInvestmentScore(
     confidence: total,
     recommendationRationale: toRationale(rec, evRatio, total),
     scoreBars: [
-      { label: 'EV Ratio', value: s1 * 4, color: '#8B5CF6' },
-      { label: 'Set Quality', value: s2 * 4, color: '#10B981' },
-      { label: 'Chase Card', value: s3 * 4, color: '#D4A843' },
-      { label: 'Timing', value: s4 * 4, color: '#F59E0B' },
+      { label: 'EV Ratio', value: s1 * 4, color: Colors.accent },
+      { label: 'Set Quality', value: s2 * 4, color: Colors.success },
+      { label: 'Chase Card', value: s3 * 4, color: Colors.accent2 },
+      { label: 'Timing', value: s4 * 4, color: Colors.warning },
     ],
   };
 }

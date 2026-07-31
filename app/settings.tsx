@@ -78,6 +78,25 @@ export default function SettingsScreen() {
     updatePreferences({ taxRatePct: next });
   }
 
+  function parseCSVLine(line: string): string[] {
+    const fields: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        fields.push(current); current = '';
+      } else {
+        current += ch;
+      }
+    }
+    fields.push(current);
+    return fields;
+  }
+
   function handleImport() {
     setImportError('');
     const lines = importText.trim().split('\n').filter(l => l.trim());
@@ -90,7 +109,7 @@ export default function SettingsScreen() {
     let imported = 0;
     const errors: string[] = [];
     for (let i = 0; i < dataLines.length; i++) {
-      const parts = dataLines[i].split(',');
+      const parts = parseCSVLine(dataLines[i]);
       if (parts.length < 5) { errors.push(`Row ${i + 1}: not enough columns`); continue; }
       const [productId, , qtyStr, priceStr, purchaseDate, condition, ...notesParts] = parts;
       const quantity = parseInt(qtyStr, 10);
