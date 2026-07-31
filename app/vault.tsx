@@ -20,7 +20,7 @@ type SortKey = 'value' | 'pnl' | 'name' | 'date';
 
 export default function VaultScreen() {
   const router = useRouter();
-  const { products, collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading, preferences } = useUserState();
+  const { products, collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading, productsLoading, preferences } = useUserState();
   const { sellingFeePct, taxRatePct, currency } = preferences;
   const [segment, setSegment] = useState<Segment>('owned');
   const [sort, setSort] = useState<SortKey>('value');
@@ -100,6 +100,14 @@ export default function VaultScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
+
+      {/* Live price loading banner */}
+      {productsLoading && (
+        <View style={s.priceBanner}>
+          <ActivityIndicator size="small" color={Colors.accent} style={{ marginRight: 6 }} />
+          <Text style={s.priceBannerText}>Loading live prices…</Text>
+        </View>
+      )}
 
       {/* Header */}
       <View style={s.header}>
@@ -272,6 +280,8 @@ export default function VaultScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
+  priceBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 6, backgroundColor: 'rgba(139,92,246,0.10)', borderBottomWidth: 1, borderBottomColor: 'rgba(139,92,246,0.15)' },
+  priceBannerText: { fontSize: 11, color: Colors.accent, fontWeight: '600' },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.md },
   title: { fontSize: 28, fontWeight: '800', color: Colors.text1, letterSpacing: -1 },

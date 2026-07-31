@@ -65,14 +65,15 @@ export function inferProductType(name: string): ProductType | null {
     return 'play-booster-case';
   }
 
-  if (name.includes('Collector Booster Box')) return 'collector-booster-box';
-  if (name.includes('Set Booster Box')) return 'set-booster-box';
-  if (name.includes('Draft Booster Box')) return 'draft-booster-box';
-  if (name.includes('Play Booster Box')) return 'play-booster-box';
-  if (name.includes('Booster Box')) return 'play-booster-box';
-  if (name.includes('Bundle')) return 'bundle';
-  if (name.includes('Commander Deck')) return 'commander-deck';
-  if (name.includes('Secret Lair')) return 'secret-lair';
+  const n = name.toLowerCase();
+  if (n.includes('collector booster box')) return 'collector-booster-box';
+  if (n.includes('set booster box')) return 'set-booster-box';
+  if (n.includes('draft booster box')) return 'draft-booster-box';
+  if (n.includes('play booster box')) return 'play-booster-box';
+  if (n.includes('booster box')) return 'play-booster-box';
+  if (n.includes('bundle')) return 'bundle';
+  if (n.includes('commander deck')) return 'commander-deck';
+  if (n.includes('secret lair')) return 'secret-lair';
   return null;
 }
 

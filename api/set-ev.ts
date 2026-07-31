@@ -191,7 +191,6 @@ export default async function handler(req: any, res: any) {
   const serializedEV = serializedCards.reduce((s, c) => s + serializedEVContrib(c), 0);
 
   // Foil EV: use foil prices where available, fall back to non-foil
-  const allNonSpecial = [...mythics, ...rares];
   const avgFoilRarePrice = avg(
     rares.map(c => usd(c.prices.usd_foil) || usd(c.prices.usd) * 1.15),
   );

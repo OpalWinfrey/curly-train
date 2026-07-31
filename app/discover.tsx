@@ -32,7 +32,7 @@ const SORT_OPTIONS = ['Price: High', 'Price: Low', 'Name A–Z', 'Release Date']
 
 export default function DiscoverScreen() {
   const router = useRouter();
-  const { products, isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
+  const { products, isInWatchlist, isInCollection, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
   const [query, setQuery] = useState('');
   const [gameFilter, setGameFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -134,6 +134,7 @@ export default function DiscoverScreen() {
               onPress={() => router.push(`/product/${item.id}`)}
               onWatchlist={() => toggleWatchlist(item.id)}
               isWatchlisted={isInWatchlist(item.id)}
+              isOwned={isInCollection(item.id)}
             />
           )}
           ItemSeparatorComponent={() => <View style={{ height: Spacing.sm }} />}
