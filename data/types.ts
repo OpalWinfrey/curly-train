@@ -18,7 +18,7 @@ export type Condition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
 export interface CardHit {
   name: string;
   rarity: Rarity;
-  price: string;
+  price: number;
   pullRate: string;
   pullPct: string;
   evContribution: string;

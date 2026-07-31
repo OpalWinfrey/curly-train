@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
-  Pressable, StatusBar, TextInput, ActivityIndicator, Share, Alert,
+  Pressable, StatusBar, TextInput, ActivityIndicator, Share, Alert, Modal,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/authContext';
 import { useUserState } from '../../data/userState';
 import { Colors, Spacing, Radius } from '../../components/tokens';
 import type { UserProfile } from '../../data/types';
+
+const CSV_HEADER = 'productId,name,quantity,purchasePrice,purchaseDate,condition,notes';
 
 function SettingRow({ label, value, onPress, note }: { label: string; value?: string; onPress?: () => void; note?: string }) {
   return (
@@ -35,7 +37,7 @@ function Div() { return <View style={ps.divider} />; }
 
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
-  const { collection, products, preferences, updatePreferences } = useUserState();
+  const { collection, products, preferences, updatePreferences, addToCollection } = useUserState();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState('');
@@ -45,6 +47,9 @@ export default function ProfileScreen() {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importError, setImportError] = useState('');
 
   useEffect(() => {
     if (!session) return;
@@ -100,6 +105,78 @@ export default function ProfileScreen() {
       title: 'My VaultMark Profile',
       message: `Check out my MTG collection on VaultMark!\n\n${collection.length} product${collection.length !== 1 ? 's' : ''} · $${shareValue.toFixed(2)} value\n\n${url}`,
     });
+  }
+
+  async function exportCSV() {
+    if (collection.length === 0) {
+      Alert.alert('Nothing to export', 'Add some products to your collection first.');
+      return;
+    }
+    const header = 'Product ID,Name,Quantity,Purchase Price,Purchase Date,Condition,Notes';
+    const rows = collection.map(item => {
+      const product = products.find(p => p.id === item.productId);
+      const name = (product?.name ?? '').replace(/"/g, '""');
+      const notes = (item.notes ?? '').replace(/"/g, '""');
+      return `${item.productId},"${name}",${item.quantity},${item.purchasePrice},${item.purchaseDate},${item.condition ?? ''},"${notes}"`;
+    });
+    const csv = [header, ...rows].join('\n');
+    await Share.share({ title: 'VaultMark Collection', message: csv });
+  }
+
+  function parseCSVLine(line: string): string[] {
+    const fields: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        fields.push(current); current = '';
+      } else {
+        current += ch;
+      }
+    }
+    fields.push(current);
+    return fields;
+  }
+
+  function handleImport() {
+    setImportError('');
+    const lines = importText.trim().split('\n').filter(l => l.trim());
+    const dataLines = lines[0]?.startsWith('productId') ? lines.slice(1) : lines;
+    if (dataLines.length === 0) {
+      setImportError('No rows found. Paste CSV rows below the header.');
+      return;
+    }
+    let imported = 0;
+    const errors: string[] = [];
+    for (let i = 0; i < dataLines.length; i++) {
+      const parts = parseCSVLine(dataLines[i]);
+      if (parts.length < 5) { errors.push(`Row ${i + 1}: not enough columns`); continue; }
+      const [productId, , qtyStr, priceStr, purchaseDate, condition, ...notesParts] = parts;
+      const quantity = parseInt(qtyStr, 10);
+      const purchasePrice = parseFloat(priceStr);
+      if (!productId.trim()) { errors.push(`Row ${i + 1}: missing productId`); continue; }
+      if (isNaN(quantity) || quantity < 1) { errors.push(`Row ${i + 1}: invalid quantity`); continue; }
+      if (isNaN(purchasePrice) || purchasePrice < 0) { errors.push(`Row ${i + 1}: invalid price`); continue; }
+      addToCollection({
+        productId: productId.trim(),
+        quantity,
+        purchasePrice,
+        purchaseDate: purchaseDate?.trim() ?? new Date().toISOString().split('T')[0],
+        condition: (condition?.trim() as 'NM' | 'LP' | 'MP' | 'HP' | 'DMG') ?? 'NM',
+        notes: notesParts.join(',').trim() || undefined,
+      });
+      imported++;
+    }
+    if (errors.length > 0) setImportError(errors.join('\n'));
+    if (imported > 0) {
+      setShowImportModal(false);
+      setImportText('');
+      Alert.alert('Import complete', `${imported} item${imported !== 1 ? 's' : ''} added to your collection.`);
+    }
   }
 
   const initials = (displayName || 'VM').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -248,9 +325,19 @@ export default function ProfileScreen() {
         </Section>
 
         <Section title="Data">
-          <SettingRow label="Data Source" value="Mock Data" note="Live TCGPlayer data coming in a future update" />
+          <SettingRow label="Data Source" value="Manapool (Live)" note="Prices updated every 5 minutes" />
           <Div />
-          <SettingRow label="Export Collection" onPress={() => {}} note="Export as CSV (coming soon)" />
+          <SettingRow
+            label="Export Collection"
+            onPress={exportCSV}
+            note={`Export ${collection.length} item${collection.length !== 1 ? 's' : ''} as CSV`}
+          />
+          <Div />
+          <SettingRow
+            label="Import Collection"
+            onPress={() => { setImportText(''); setImportError(''); setShowImportModal(true); }}
+            note="Paste CSV to add items to your collection"
+          />
         </Section>
 
         <Section title="About">
@@ -274,6 +361,38 @@ export default function ProfileScreen() {
 
         <View style={{ height: Spacing.xxl }} />
       </ScrollView>
+
+      <Modal visible={showImportModal} animationType="slide" transparent>
+        <View style={ps.modalOverlay}>
+          <View style={ps.modalCard}>
+            <Text style={ps.modalTitle}>Import Collection</Text>
+            <Text style={ps.modalSub}>
+              Paste CSV rows below. Expected format:{'\n'}
+              <Text style={ps.modalMono}>{CSV_HEADER}</Text>
+            </Text>
+            <TextInput
+              style={ps.csvInput}
+              multiline
+              numberOfLines={8}
+              placeholder={`${CSV_HEADER}\nblg-bloomburrow-play-booster-box,Bloomburrow Play Booster Box,2,149.99,2024-08-02,NM,`}
+              placeholderTextColor={Colors.text3}
+              value={importText}
+              onChangeText={t => { setImportText(t); setImportError(''); }}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {importError !== '' && <Text style={ps.importError}>{importError}</Text>}
+            <View style={ps.modalBtns}>
+              <Pressable style={[ps.modalBtn, ps.modalBtnSecondary]} onPress={() => setShowImportModal(false)}>
+                <Text style={ps.modalBtnSecText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={[ps.modalBtn, ps.modalBtnPrimary]} onPress={handleImport}>
+                <Text style={ps.modalBtnPriText}>Import</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -320,4 +439,17 @@ const ps = StyleSheet.create({
   disclaimerText: { fontSize: 11, color: Colors.text3, lineHeight: 17 },
   signOutBtn: { borderWidth: 1, borderColor: Colors.danger, borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center' },
   signOutText: { fontSize: 15, fontWeight: '700', color: Colors.danger },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: Colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Spacing.xl, gap: Spacing.md, borderTopWidth: 1, borderColor: Colors.border },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text1, letterSpacing: -0.3 },
+  modalSub: { fontSize: 12, color: Colors.text3, lineHeight: 18 },
+  modalMono: { fontSize: 11, color: Colors.accent, fontVariant: ['tabular-nums'] },
+  csvInput: { backgroundColor: Colors.bg, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, color: Colors.text1, fontSize: 11, fontVariant: ['tabular-nums'], minHeight: 140, textAlignVertical: 'top' },
+  importError: { fontSize: 11, color: Colors.danger, lineHeight: 16 },
+  modalBtns: { flexDirection: 'row', gap: Spacing.sm },
+  modalBtn: { flex: 1, height: 44, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  modalBtnPrimary: { backgroundColor: Colors.accent },
+  modalBtnSecondary: { backgroundColor: Colors.bg, borderWidth: 1, borderColor: Colors.border },
+  modalBtnPriText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  modalBtnSecText: { fontSize: 14, fontWeight: '600', color: Colors.text2 },
 });

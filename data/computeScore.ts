@@ -25,7 +25,7 @@ export function setQualityScore(evData: LiveEVData): number {
 }
 
 export function chaseCeilingScore(evData: LiveEVData): number {
-  const topPrice = evData.topHits[0] ? parseFloat(evData.topHits[0].price.replace('$', '')) : 0;
+  const topPrice = evData.topHits[0] ? evData.topHits[0].price : 0;
   if (topPrice >= 50) return 25;
   if (topPrice >= 25) return 18;
   if (topPrice >= 10) return 10;
