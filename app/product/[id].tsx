@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUserState } from '../../data/userState';
 import { PlayBoosterDetail } from '../../components/detail/PlayBoosterDetail';
@@ -12,13 +12,23 @@ import { Colors, Spacing, Radius } from '../../components/tokens';
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { products, addRecentlyViewed } = useUserState();
+  const { products, productsLoading, addRecentlyViewed } = useUserState();
 
   const product = products.find(p => p.id === id);
 
   useEffect(() => {
     if (product) addRecentlyViewed(product.id);
   }, [product?.id]);
+
+  if (!product && productsLoading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.notFound}>
+          <ActivityIndicator color={Colors.accent} size="large" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!product) {
     return (

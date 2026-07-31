@@ -15,6 +15,7 @@ import { IncludedCardRow } from '../IncludedCardRow';
 import { AddToCollectionModal } from '../AddToCollectionModal';
 import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
+import { formatPrice } from '../../data/formatPrice';
 import { useUserState } from '../../data/userState';
 import { useSetEV } from '../../data/useSetEV';
 import { computeInvestmentScore } from '../../data/computeScore';
@@ -23,7 +24,8 @@ import type { Product, Condition } from '../../data/types';
 interface Props { product: Product }
 
 export function CommanderDeckDetail({ product }: Props) {
-  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist } = useUserState();
+  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist, preferences } = useUserState();
+  const { currency } = preferences;
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
 
@@ -127,7 +129,7 @@ export function CommanderDeckDetail({ product }: Props) {
           {product.priceHistory.length > 0 && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
+              <PriceChart currentPrice={formatPrice(product.currentMarketPrice, currency)} weekChange={weekChange} priceHistory={product.priceHistory} />
             </View>
           )}
 

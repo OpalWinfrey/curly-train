@@ -1,15 +1,35 @@
 import { Colors, ChartColors } from '../components/tokens';
 import type { Product } from './types';
 
-// 7-period price history helpers
+// Seeded PRNG (xorshift32) so price history is deterministic per product
+function seededRng(seed: number): () => number {
+  let s = (seed >>> 0) || 1;
+  return () => {
+    s ^= s << 13; s >>>= 0;
+    s ^= s >> 17;
+    s ^= s << 5; s >>>= 0;
+    return s / 0xffffffff;
+  };
+}
+
+function hashStr(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h;
+}
+
 export function makeHistory(current: number, trend: 'up' | 'down' | 'flat') {
+  const rng = seededRng(hashStr(`${current}-${trend}`));
   const base = current;
   const pts = [];
   for (let i = 29; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     // flat = no noise, so PriceChart can detect synthetic data and show a placeholder
-    const noise = trend === 'flat' ? 0 : (Math.random() - 0.5) * 6;
+    const noise = trend === 'flat' ? 0 : (rng() - 0.5) * 6;
     let drift = 0;
     if (trend === 'up') drift = ((29 - i) / 29) * 15;
     if (trend === 'down') drift = -((29 - i) / 29) * 12;

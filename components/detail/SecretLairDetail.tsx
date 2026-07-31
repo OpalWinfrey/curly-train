@@ -15,6 +15,7 @@ import { IncludedCardRow } from '../IncludedCardRow';
 import { AddToCollectionModal } from '../AddToCollectionModal';
 import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
+import { formatPrice } from '../../data/formatPrice';
 import { useUserState } from '../../data/userState';
 import type { Product, Condition } from '../../data/types';
 
@@ -58,7 +59,8 @@ const rStyles = StyleSheet.create({
 });
 
 export function SecretLairDetail({ product }: Props) {
-  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist } = useUserState();
+  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist, preferences } = useUserState();
+  const { currency } = preferences;
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
 
@@ -138,12 +140,12 @@ export function SecretLairDetail({ product }: Props) {
           <View>
             <View style={styles.sectionHead}><SectionHeader eyebrow="Market Data" title="Value Summary" /></View>
             <View style={styles.metricGrid}>
-              <MetricTile label="Original MSRP" value={`$${msrp.toFixed(2)}`} sub="Nonfoil" />
-              <MetricTile label="Current Sealed" value={product.currentMarketPrice > 0 ? `$${product.currentMarketPrice.toFixed(2)}` : 'N/A'}
+              <MetricTile label="Original MSRP" value={formatPrice(msrp, currency)} sub="Nonfoil" />
+              <MetricTile label="Current Sealed" value={product.currentMarketPrice > 0 ? formatPrice(product.currentMarketPrice, currency) : 'N/A'}
                 accent={product.currentMarketPrice > msrp ? Colors.success : Colors.danger} />
             </View>
             <View style={[styles.metricGrid, { marginTop: Spacing.sm }]}>
-              <MetricTile label="Card Singles" value={`$${totalCardValue.toFixed(2)}`}
+              <MetricTile label="Card Singles" value={formatPrice(totalCardValue, currency)}
                 accent={totalCardValue > msrp ? Colors.success : Colors.danger} />
               <MetricTile label="Singles vs MSRP"
                 value={`${cardVsMsrp >= 0 ? '+' : ''}$${cardVsMsrp.toFixed(2)}`}
@@ -202,7 +204,7 @@ export function SecretLairDetail({ product }: Props) {
           {product.priceHistory.length > 0 && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
+              <PriceChart currentPrice={formatPrice(product.currentMarketPrice, currency)} weekChange={weekChange} priceHistory={product.priceHistory} />
             </View>
           )}
 

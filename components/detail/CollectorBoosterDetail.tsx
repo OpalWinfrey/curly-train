@@ -15,6 +15,7 @@ import { SectionHeader } from '../SectionHeader';
 import { AddToCollectionModal } from '../AddToCollectionModal';
 import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
+import { formatPrice } from '../../data/formatPrice';
 import { useUserState } from '../../data/userState';
 import { useProductArt } from '../../data/scryfall';
 import { useSetEV } from '../../data/useSetEV';
@@ -27,7 +28,8 @@ type Tab = typeof TABS[number];
 interface Props { product: Product }
 
 export function CollectorBoosterDetail({ product }: Props) {
-  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist } = useUserState();
+  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist, preferences } = useUserState();
+  const { currency } = preferences;
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
@@ -94,8 +96,8 @@ export function CollectorBoosterDetail({ product }: Props) {
           releaseDate={`Released ${new Date(product.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
           heroImageUrl={heroImageUrl}
           metrics={[
-            { label: 'Market Price', value: product.currentMarketPrice > 0 ? `$${product.currentMarketPrice.toFixed(2)}` : 'N/A', sub: product.currentMarketPrice > 0 ? `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` : 'No price data' },
-            { label: isCase ? 'Case EV' : 'Expected EV', value: evLoading ? '…' : `$${displayEV.toFixed(2)}`, sub: evLoading ? 'Loading…' : product.currentMarketPrice > 0 ? `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` : '' },
+            { label: 'Market Price', value: product.currentMarketPrice > 0 ? formatPrice(product.currentMarketPrice, currency) : 'N/A', sub: product.currentMarketPrice > 0 ? `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` : 'No price data' },
+            { label: isCase ? 'Case EV' : 'Expected EV', value: evLoading ? '…' : formatPrice(displayEV, currency), sub: evLoading ? 'Loading…' : product.currentMarketPrice > 0 ? `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` : '' },
             { label: 'Investment Score', value: String(computedScore), sub: computedScore >= 80 ? 'EXCELLENT' : computedScore >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: computedScore },
           ]}
           inCollection={inCollection}
@@ -197,7 +199,7 @@ export function CollectorBoosterDetail({ product }: Props) {
               </View>
               {evLoading && !displaySegments
                 ? <View style={styles.loadingBox}><Text style={styles.loadingText}>Computing EV from live card prices…</Text></View>
-                : displaySegments && <ValueBreakdown totalEV={`$${displayEV.toFixed(2)}`} segments={displaySegments} />}
+                : displaySegments && <ValueBreakdown totalEV={formatPrice(displayEV, currency)} segments={displaySegments} />}
             </View>
           )}
 
@@ -227,7 +229,7 @@ export function CollectorBoosterDetail({ product }: Props) {
           {(showOverview || showPrice) && product.priceHistory.length > 0 && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
+              <PriceChart currentPrice={formatPrice(product.currentMarketPrice, currency)} weekChange={weekChange} priceHistory={product.priceHistory} />
             </View>
           )}
 
