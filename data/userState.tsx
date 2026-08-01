@@ -150,6 +150,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
           sellingFeePct: Number(prefs.data.selling_fee_pct),
           taxRatePct: Number(prefs.data.tax_rate_pct),
         });
+        setRecentlyViewed((prefs.data.recently_viewed as string[] | null) ?? []);
       }
       setIsLoading(false);
     }).catch(err => {
@@ -267,10 +268,15 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
 
   const addRecentlyViewed = useCallback((productId: string) => {
     setRecentlyViewed(prev => {
-      const filtered = prev.filter(id => id !== productId);
-      return [productId, ...filtered].slice(0, 5);
+      const next = [productId, ...prev.filter(id => id !== productId)].slice(0, 20);
+      if (userId) {
+        supabase.from('user_preferences')
+          .upsert({ user_id: userId, recently_viewed: next, updated_at: new Date().toISOString() })
+          .then();
+      }
+      return next;
     });
-  }, []);
+  }, [userId]);
 
   const isInCollection = useCallback((productId: string) => collection.some(c => c.productId === productId), [collection]);
   const isInWatchlist = useCallback((productId: string) => watchlist.some(w => w.productId === productId), [watchlist]);
