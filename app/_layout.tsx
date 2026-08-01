@@ -115,10 +115,6 @@ function AppContent() {
         <Tabs.Screen name="(auth)" options={{ href: null }} />
         <Tabs.Screen name="product/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
         <Tabs.Screen name="add-product" options={{ href: null, tabBarStyle: { display: 'none' } }} />
-        {/* Old routes hidden (kept as files until cleaned up) */}
-        <Tabs.Screen name="collection" options={{ href: null }} />
-        <Tabs.Screen name="watchlist" options={{ href: null }} />
-        <Tabs.Screen name="settings" options={{ href: null }} />
       </Tabs>
     </UserStateProvider>
   );

@@ -96,7 +96,7 @@ function usd(s: string | null | undefined): number {
   return isNaN(n) ? 0 : n;
 }
 
-async function fetchAllCards(setCode: string): Promise<ScryfallCard[]> {
+async function fetchAllCards(setCode: string, signal?: AbortSignal): Promise<ScryfallCard[]> {
   const cards: ScryfallCard[] = [];
   let url: string | undefined =
     `https://api.scryfall.com/cards/search?q=e%3A${encodeURIComponent(setCode)}+not%3Adigital&order=usd&dir=desc&unique=prints`;
@@ -104,6 +104,7 @@ async function fetchAllCards(setCode: string): Promise<ScryfallCard[]> {
   while (url) {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'VaultMark/1.0', Accept: 'application/json' },
+      signal,
     });
     if (!res.ok) break;
     const page: ScryfallPage = await res.json();
@@ -114,7 +115,14 @@ async function fetchAllCards(setCode: string): Promise<ScryfallCard[]> {
   return cards;
 }
 
-export default async function handler(req: any, res: any) {
+interface Req { method?: string; query: Record<string, string | string[]> }
+interface Res { status(c: number): Res; json(d: unknown): void; setHeader(k: string, v: string): void }
+
+export default async function handler(req: Req, res: Res) {
+  if (req.method && req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
   const setCode = (req.query.setCode as string | undefined)?.toUpperCase();
   if (!setCode) {
     res.status(400).json({ error: 'Missing setCode' });
@@ -127,12 +135,20 @@ export default async function handler(req: any, res: any) {
     TREATMENT_PER_BOX, SPECIAL_GUEST_PER_BOX, BULK_EV_PER_BOX, SERIALIZED_PER_BOX,
   } = getSlotModel(productType);
 
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 8000);
   let cards: ScryfallCard[];
   try {
-    cards = await fetchAllCards(setCode);
-  } catch {
-    res.status(502).json({ error: 'Scryfall fetch failed' });
+    cards = await fetchAllCards(setCode, ac.signal);
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      res.status(504).json({ error: 'Scryfall fetch timed out' });
+    } else {
+      res.status(502).json({ error: 'Scryfall fetch failed' });
+    }
     return;
+  } finally {
+    clearTimeout(timer);
   }
 
   if (cards.length === 0) {
@@ -191,7 +207,6 @@ export default async function handler(req: any, res: any) {
   const serializedEV = serializedCards.reduce((s, c) => s + serializedEVContrib(c), 0);
 
   // Foil EV: use foil prices where available, fall back to non-foil
-  const allNonSpecial = [...mythics, ...rares];
   const avgFoilRarePrice = avg(
     rares.map(c => usd(c.prices.usd_foil) || usd(c.prices.usd) * 1.15),
   );
@@ -271,7 +286,7 @@ export default async function handler(req: any, res: any) {
     return {
       name: card.name,
       rarity: isSerialized ? 'S' : rarity,
-      price: `$${price.toFixed(2)}`,
+      price: price,
       pullRate: String(pullRateOneIn),
       pullPct: `${pullPct}%`,
       evContribution: `$${evContrib.toFixed(2)}`,

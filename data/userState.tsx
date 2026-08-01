@@ -29,7 +29,7 @@ interface UserState {
   addToWatchlist: (item: Omit<WatchlistItem, 'id' | 'userId'>) => Promise<void>;
   updateWatchlistItem: (id: string, updates: Partial<WatchlistItem>) => Promise<void>;
   removeFromWatchlist: (id: string) => Promise<void>;
-  moveWatchlistToCollection: (watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string) => Promise<void>;
+  moveWatchlistToCollection: (watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string, condition?: CollectionItem['condition']) => Promise<void>;
   updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void>;
   addRecentlyViewed: (productId: string) => void;
   isInCollection: (productId: string) => boolean;
@@ -150,7 +150,11 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
           sellingFeePct: Number(prefs.data.selling_fee_pct),
           taxRatePct: Number(prefs.data.tax_rate_pct),
         });
+        setRecentlyViewed((prefs.data.recently_viewed as string[] | null) ?? []);
       }
+      setIsLoading(false);
+    }).catch(err => {
+      console.warn('[VaultMark] Failed to load user data:', err);
       setIsLoading(false);
     });
   }, [userId]);
@@ -162,13 +166,16 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
       const updates = {
         quantity: existing.quantity + item.quantity,
         purchase_price: item.purchasePrice,
+        purchase_date: item.purchaseDate,
+        condition: item.condition,
         notes: item.notes ?? existing.notes,
       };
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('collection_items').update(updates).eq('id', existing.id).select().single();
+      if (error) throw new Error(error.message);
       if (data) setCollection(prev => prev.map(c => c.id === existing.id ? toCollectionItem(data) : c));
     } else {
-      const { data } = await supabase.from('collection_items').insert({
+      const { data, error } = await supabase.from('collection_items').insert({
         user_id: userId,
         product_id: item.productId,
         quantity: item.quantity,
@@ -177,6 +184,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
         condition: item.condition,
         notes: item.notes,
       }).select().single();
+      if (error) throw new Error(error.message);
       if (data) setCollection(prev => [...prev, toCollectionItem(data)]);
     }
   }, [userId, collection]);
@@ -189,27 +197,30 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     if (updates.purchaseDate !== undefined) dbUpdates.purchase_date = updates.purchaseDate;
     if (updates.condition !== undefined) dbUpdates.condition = updates.condition;
     if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('collection_items').update(dbUpdates).eq('id', id).select().single();
+    if (error) throw new Error(error.message);
     if (data) setCollection(prev => prev.map(c => c.id === id ? toCollectionItem(data) : c));
   }, [userId]);
 
   const removeFromCollection = useCallback(async (id: string) => {
     if (!userId) return;
-    await supabase.from('collection_items').delete().eq('id', id);
+    const { error } = await supabase.from('collection_items').delete().eq('id', id);
+    if (error) throw new Error(error.message);
     setCollection(prev => prev.filter(c => c.id !== id));
   }, [userId]);
 
   const addToWatchlist = useCallback(async (item: Omit<WatchlistItem, 'id' | 'userId'>) => {
     if (!userId) return;
     if (watchlist.find(w => w.productId === item.productId)) return;
-    const { data } = await supabase.from('watchlist_items').insert({
+    const { data, error } = await supabase.from('watchlist_items').insert({
       user_id: userId,
       product_id: item.productId,
       target_price: item.targetPrice,
       date_added: item.dateAdded,
       notes: item.notes,
     }).select().single();
+    if (error) throw new Error(error.message);
     if (data) setWatchlist(prev => [...prev, toWatchlistItem(data)]);
   }, [userId, watchlist]);
 
@@ -218,23 +229,25 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     const dbUpdates: Record<string, unknown> = {};
     if (updates.targetPrice !== undefined) dbUpdates.target_price = updates.targetPrice;
     if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('watchlist_items').update(dbUpdates).eq('id', id).select().single();
+    if (error) throw new Error(error.message);
     if (data) setWatchlist(prev => prev.map(w => w.id === id ? toWatchlistItem(data) : w));
   }, [userId]);
 
   const removeFromWatchlist = useCallback(async (id: string) => {
     if (!userId) return;
-    await supabase.from('watchlist_items').delete().eq('id', id);
+    const { error } = await supabase.from('watchlist_items').delete().eq('id', id);
+    if (error) throw new Error(error.message);
     setWatchlist(prev => prev.filter(w => w.id !== id));
   }, [userId]);
 
   const moveWatchlistToCollection = useCallback(async (
-    watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string
+    watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string, condition: CollectionItem['condition'] = 'NM'
   ) => {
     const wItem = watchlist.find(w => w.id === watchlistId);
     if (!wItem) return;
-    await addToCollection({ productId: wItem.productId, quantity, purchasePrice, purchaseDate, notes, condition: 'NM' });
+    await addToCollection({ productId: wItem.productId, quantity, purchasePrice, purchaseDate, notes, condition });
     await removeFromWatchlist(watchlistId);
   }, [watchlist, addToCollection, removeFromWatchlist]);
 
@@ -242,7 +255,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     if (!userId) return;
     const next = { ...preferences, ...prefs };
     setPreferences(next);
-    await supabase.from('user_preferences').upsert({
+    const { error } = await supabase.from('user_preferences').upsert({
       user_id: userId,
       currency: next.currency,
       marketplace: next.marketplace,
@@ -250,14 +263,20 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
       tax_rate_pct: next.taxRatePct,
       updated_at: new Date().toISOString(),
     });
+    if (error) throw new Error(error.message);
   }, [userId, preferences]);
 
   const addRecentlyViewed = useCallback((productId: string) => {
     setRecentlyViewed(prev => {
-      const filtered = prev.filter(id => id !== productId);
-      return [productId, ...filtered].slice(0, 5);
+      const next = [productId, ...prev.filter(id => id !== productId)].slice(0, 20);
+      if (userId) {
+        supabase.from('user_preferences')
+          .upsert({ user_id: userId, recently_viewed: next, updated_at: new Date().toISOString() })
+          .then();
+      }
+      return next;
     });
-  }, []);
+  }, [userId]);
 
   const isInCollection = useCallback((productId: string) => collection.some(c => c.productId === productId), [collection]);
   const isInWatchlist = useCallback((productId: string) => watchlist.some(w => w.productId === productId), [watchlist]);

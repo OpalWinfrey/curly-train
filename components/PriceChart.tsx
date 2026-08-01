@@ -56,17 +56,17 @@ export function PriceChart({ currentPrice, weekChange, priceHistory }: Props) {
   const lastY = yp(prices[prices.length - 1]);
 
   const sorted = [...priceHistory].sort((a, b) => a.date.localeCompare(b.date));
-  const firstDate = sorted[0]?.date ?? '';
-  const midDate = sorted[Math.floor(sorted.length / 2)]?.date ?? '';
-  const lastDate = sorted[sorted.length - 1]?.date ?? '';
+  const days = period === '1W' ? 7 : period === '1M' ? 30 : Infinity;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const periodSorted = days === Infinity
+    ? sorted
+    : sorted.filter(p => new Date(p.date) >= cutoff);
+  const axisSrc = periodSorted.length >= 2 ? periodSorted : sorted;
 
-  const axisLeft = period === '1W'
-    ? formatAxisDate(sorted.slice(-7)[0]?.date ?? firstDate)
-    : period === '1M' ? formatAxisDate(firstDate)
-    : formatAxisDate(firstDate);
-
-  const axisMid = formatAxisDate(midDate);
-  const axisRight = formatAxisDate(lastDate);
+  const axisLeft = formatAxisDate(axisSrc[0]?.date ?? '');
+  const axisMid = formatAxisDate(axisSrc[Math.floor(axisSrc.length / 2)]?.date ?? '');
+  const axisRight = formatAxisDate(axisSrc[axisSrc.length - 1]?.date ?? '');
 
   return (
     <View style={styles.card}>

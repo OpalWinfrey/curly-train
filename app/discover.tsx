@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ScrollView, View, Text, StyleSheet, SafeAreaView, StatusBar, FlatList, Pressable } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, SafeAreaView, StatusBar, FlatList, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { SearchBar } from '../components/SearchBar';
@@ -32,7 +32,7 @@ const SORT_OPTIONS = ['Price: High', 'Price: Low', 'Name A–Z', 'Release Date']
 
 export default function DiscoverScreen() {
   const router = useRouter();
-  const { products, isInWatchlist, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
+  const { products, isInWatchlist, isInCollection, addToWatchlist, removeFromWatchlist, getWatchlistItem } = useUserState();
   const [query, setQuery] = useState('');
   const [gameFilter, setGameFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -74,15 +74,19 @@ export default function DiscoverScreen() {
     return results;
   }, [products, query, gameFilter, typeFilter, sort]);
 
-  function toggleWatchlist(productId: string) {
+  async function toggleWatchlist(productId: string) {
     const wItem = getWatchlistItem(productId);
-    if (wItem) {
-      removeFromWatchlist(wItem.id);
-    } else {
-      const product = products.find(p => p.id === productId);
-      if (product) {
-        addToWatchlist({ productId, targetPrice: product.currentMarketPrice, dateAdded: new Date().toISOString().split('T')[0] });
+    try {
+      if (wItem) {
+        await removeFromWatchlist(wItem.id);
+      } else {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+          await addToWatchlist({ productId, targetPrice: product.currentMarketPrice, dateAdded: new Date().toISOString().split('T')[0] });
+        }
       }
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Could not update watchlist. Please try again.');
     }
   }
 
@@ -92,7 +96,7 @@ export default function DiscoverScreen() {
 
       <View style={styles.header}>
         <Text style={styles.title}>Discover</Text>
-        <Text style={styles.subtitle}>{products.length} products</Text>
+        <Text style={styles.subtitle}>{filtered.length} product{filtered.length !== 1 ? 's' : ''}</Text>
       </View>
 
       <View style={styles.searchWrap}>
@@ -134,6 +138,7 @@ export default function DiscoverScreen() {
               onPress={() => router.push(`/product/${item.id}`)}
               onWatchlist={() => toggleWatchlist(item.id)}
               isWatchlisted={isInWatchlist(item.id)}
+              isOwned={isInCollection(item.id)}
             />
           )}
           ItemSeparatorComponent={() => <View style={{ height: Spacing.sm }} />}

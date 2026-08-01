@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
-  Pressable, StatusBar, Share,
+  Pressable, StatusBar,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 
+import { DetailNavBar } from '../DetailNavBar';
 import { ProductHero } from '../ProductHero';
 import { InvestmentScore } from '../InvestmentScore';
 import { PriceChart } from '../PriceChart';
@@ -15,6 +15,7 @@ import { SectionHeader } from '../SectionHeader';
 import { AddToCollectionModal } from '../AddToCollectionModal';
 import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
+import { formatPrice } from '../../data/formatPrice';
 import { useUserState } from '../../data/userState';
 import { useProductArt } from '../../data/scryfall';
 import { useSetEV } from '../../data/useSetEV';
@@ -27,8 +28,8 @@ type Tab = typeof TABS[number];
 interface Props { product: Product }
 
 export function CollectorBoosterDetail({ product }: Props) {
-  const router = useRouter();
-  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist } = useUserState();
+  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist, preferences } = useUserState();
+  const { currency } = preferences;
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
@@ -84,23 +85,7 @@ export function CollectorBoosterDetail({ product }: Props) {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
 
-      <View style={styles.nav}>
-        <Pressable style={styles.navBtn} onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.navBtnText}>‹</Text>
-        </Pressable>
-        <View style={styles.brand}>
-          <View style={styles.brandIcon}>
-            <Text style={{ fontSize: 10, color: Colors.accent, fontWeight: '800' }}>VM</Text>
-          </View>
-          <Text style={styles.brandName}>VAULT<Text style={styles.brandAccent}>MARK</Text></Text>
-        </View>
-        <View style={styles.navActions}>
-          <Pressable onPress={() => setShowWatchlistModal(true)} style={styles.navBtn} hitSlop={8}>
-            <Text style={[styles.navBtnIcon, inWatchlist && { color: Colors.danger }]}>{inWatchlist ? '♥' : '♡'}</Text>
-          </Pressable>
-          <Pressable style={styles.navBtn} hitSlop={8} onPress={() => Share.share({ message: `Check out ${product.setName} on VaultMark`, url: `https://vaultmark-sealed.vercel.app` })}><Text style={styles.navBtnIcon}>↑</Text></Pressable>
-        </View>
-      </View>
+      <DetailNavBar productName={product.setName} inWatchlist={inWatchlist} onWatchlist={() => setShowWatchlistModal(true)} />
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         <ProductHero
@@ -111,8 +96,8 @@ export function CollectorBoosterDetail({ product }: Props) {
           releaseDate={`Released ${new Date(product.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
           heroImageUrl={heroImageUrl}
           metrics={[
-            { label: 'Market Price', value: product.currentMarketPrice > 0 ? `$${product.currentMarketPrice.toFixed(2)}` : 'N/A', sub: product.currentMarketPrice > 0 ? `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` : 'No price data' },
-            { label: isCase ? 'Case EV' : 'Expected EV', value: evLoading ? '…' : `$${displayEV.toFixed(2)}`, sub: evLoading ? 'Loading…' : product.currentMarketPrice > 0 ? `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` : '' },
+            { label: 'Market Price', value: product.currentMarketPrice > 0 ? formatPrice(product.currentMarketPrice, currency) : 'N/A', sub: product.currentMarketPrice > 0 ? `${product.priceChangePct >= 0 ? '+' : ''}${product.priceChangePct.toFixed(2)}% · 7d` : 'No price data' },
+            { label: isCase ? 'Case EV' : 'Expected EV', value: evLoading ? '…' : formatPrice(displayEV, currency), sub: evLoading ? 'Loading…' : product.currentMarketPrice > 0 ? `${((displayEV / product.currentMarketPrice) * 100).toFixed(1)}% of price` : '' },
             { label: 'Investment Score', value: String(computedScore), sub: computedScore >= 80 ? 'EXCELLENT' : computedScore >= 65 ? 'GOOD' : 'FAIR', isScore: true, score: computedScore },
           ]}
           inCollection={inCollection}
@@ -214,7 +199,7 @@ export function CollectorBoosterDetail({ product }: Props) {
               </View>
               {evLoading && !displaySegments
                 ? <View style={styles.loadingBox}><Text style={styles.loadingText}>Computing EV from live card prices…</Text></View>
-                : displaySegments && <ValueBreakdown totalEV={`$${displayEV.toFixed(2)}`} segments={displaySegments} />}
+                : displaySegments && <ValueBreakdown totalEV={formatPrice(displayEV, currency)} segments={displaySegments} />}
             </View>
           )}
 
@@ -244,7 +229,7 @@ export function CollectorBoosterDetail({ product }: Props) {
           {(showOverview || showPrice) && product.priceHistory.length > 0 && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
+              <PriceChart currentPrice={formatPrice(product.currentMarketPrice, currency)} weekChange={weekChange} priceHistory={product.priceHistory} />
             </View>
           )}
 
@@ -270,15 +255,6 @@ export function CollectorBoosterDetail({ product }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
-  nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
-  navBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
-  navBtnText: { fontSize: 22, color: Colors.text2, lineHeight: 26, marginTop: -2 },
-  navBtnIcon: { fontSize: 16, color: Colors.text2 },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  brandIcon: { width: 26, height: 26, borderRadius: 7, backgroundColor: 'rgba(139,92,246,0.15)', borderWidth: 1, borderColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
-  brandName: { fontSize: 15, fontWeight: '800', letterSpacing: 0.5, color: '#fff' },
-  brandAccent: { color: Colors.accent },
-  navActions: { flexDirection: 'row', gap: 8 },
   scroll: { flex: 1 },
   tabsScroll: { borderBottomWidth: 1, borderBottomColor: Colors.border },
   tabs: { flexDirection: 'row', paddingHorizontal: Spacing.lg },

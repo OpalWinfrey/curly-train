@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
-  Pressable, StatusBar, Image,
+  Pressable, StatusBar, Image, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -110,7 +110,7 @@ export default function HomeScreen() {
           </View>
           <Text style={styles.brandName}>VAULT<Text style={styles.brandAccent}>MARK</Text></Text>
         </View>
-        <Pressable style={styles.bellBtn}>
+        <Pressable style={styles.bellBtn} onPress={() => Alert.alert('Coming Soon', 'Push notifications will be available in a future update.')}>
           <Text style={styles.bellIcon}>◌</Text>
         </Pressable>
       </View>

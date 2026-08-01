@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { SearchBar } from '../components/SearchBar';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
-import { formatPrice } from '../data/formatPrice';
+import { formatPrice, currencySymbol } from '../data/formatPrice';
 import type { Product, Condition } from '../data/types';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -207,11 +207,11 @@ export default function AddProductScreen() {
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>QUANTITY</Text>
                 <View style={styles.qtyRow}>
-                  <Pressable onPress={() => setQuantity(q => String(Math.max(1, parseInt(q) - 1)))} style={styles.qtyBtn}>
+                  <Pressable onPress={() => setQuantity(q => String(Math.max(1, (parseInt(q) || 1) - 1)))} style={styles.qtyBtn}>
                     <Text style={styles.qtyBtnText}>−</Text>
                   </Pressable>
                   <TextInput style={styles.qtyInput} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" selectTextOnFocus />
-                  <Pressable onPress={() => setQuantity(q => String(parseInt(q) + 1))} style={styles.qtyBtn}>
+                  <Pressable onPress={() => setQuantity(q => String((parseInt(q) || 1) + 1))} style={styles.qtyBtn}>
                     <Text style={styles.qtyBtnText}>+</Text>
                   </Pressable>
                 </View>
@@ -219,7 +219,7 @@ export default function AddProductScreen() {
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>PURCHASE PRICE</Text>
                 <View style={[styles.inputWrap, errors.purchasePrice ? styles.inputError : null]}>
-                  <Text style={styles.currSign}>$</Text>
+                  <Text style={styles.currSign}>{currencySymbol(currency)}</Text>
                   <TextInput style={styles.textInput} value={purchasePrice} onChangeText={v => { setPurchasePrice(v); setErrors(e => ({ ...e, purchasePrice: '' })); }} keyboardType="decimal-pad" selectTextOnFocus />
                 </View>
                 {errors.purchasePrice ? <Text style={styles.errorText}>{errors.purchasePrice}</Text> : null}
@@ -268,13 +268,13 @@ export default function AddProductScreen() {
 
             <View style={styles.currentPriceBox}>
               <Text style={styles.currentPriceLabel}>Current Market Price</Text>
-              <Text style={styles.currentPriceVal}>${selectedProduct.currentMarketPrice.toFixed(2)}</Text>
+              <Text style={styles.currentPriceVal}>{formatPrice(selectedProduct.currentMarketPrice, currency)}</Text>
             </View>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>TARGET PRICE</Text>
               <View style={[styles.inputWrap, errors.targetPrice ? styles.inputError : null]}>
-                <Text style={styles.currSign}>$</Text>
+                <Text style={styles.currSign}>{currencySymbol(currency)}</Text>
                 <TextInput style={styles.textInput} value={targetPrice} onChangeText={v => { setTargetPrice(v); setErrors(e => ({ ...e, targetPrice: '' })); }} keyboardType="decimal-pad" autoFocus selectTextOnFocus />
               </View>
               {errors.targetPrice ? <Text style={styles.errorText}>{errors.targetPrice}</Text> : null}

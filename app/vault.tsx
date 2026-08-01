@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, Pressable,
-  StatusBar, FlatList, ActivityIndicator,
+  StatusBar, FlatList, ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,7 +20,7 @@ type SortKey = 'value' | 'pnl' | 'name' | 'date';
 
 export default function VaultScreen() {
   const router = useRouter();
-  const { products, collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading, preferences } = useUserState();
+  const { products, collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading, productsLoading, preferences } = useUserState();
   const { sellingFeePct, taxRatePct, currency } = preferences;
   const [segment, setSegment] = useState<Segment>('owned');
   const [sort, setSort] = useState<SortKey>('value');
@@ -56,8 +56,8 @@ export default function VaultScreen() {
   const showNetLabel = sellingFeePct > 0 || taxRatePct > 0;
 
   const sortedByPct = [...enrichedCollection].sort((a, b) => {
-    const ap = ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100;
-    const bp = ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100;
+    const ap = a.item.purchasePrice > 0 ? ((a.product.currentMarketPrice - a.item.purchasePrice) / a.item.purchasePrice) * 100 : 0;
+    const bp = b.item.purchasePrice > 0 ? ((b.product.currentMarketPrice - b.item.purchasePrice) / b.item.purchasePrice) * 100 : 0;
     return bp - ap;
   });
   const best = sortedByPct[0];
@@ -74,16 +74,24 @@ export default function VaultScreen() {
     ...aboveTarget.map(e => ({ ...e, atTarget: false })),
   ];
 
-  function handleUpdateItem(qty: number, price: number, date: string, condition: Condition, notes: string) {
+  async function handleUpdateItem(qty: number, price: number, date: string, condition: Condition, notes: string) {
     if (!editItem) return;
-    updateCollectionItem(editItem.item.id, { quantity: qty, purchasePrice: price, purchaseDate: date, condition, notes });
-    setEditItem(null);
+    try {
+      await updateCollectionItem(editItem.item.id, { quantity: qty, purchasePrice: price, purchaseDate: date, condition, notes });
+      setEditItem(null);
+    } catch (err) {
+      Alert.alert('Save Failed', err instanceof Error ? err.message : 'Could not update item. Please try again.');
+    }
   }
 
-  function handleMarkPurchased(qty: number, price: number, date: string, _condition: Condition, notes: string) {
+  async function handleMarkPurchased(qty: number, price: number, date: string, condition: Condition, notes: string) {
     if (!purchaseItem) return;
-    moveWatchlistToCollection(purchaseItem.wItem.id, price, qty, date, notes);
-    setPurchaseItem(null);
+    try {
+      await moveWatchlistToCollection(purchaseItem.wItem.id, price, qty, date, notes, condition);
+      setPurchaseItem(null);
+    } catch (err) {
+      Alert.alert('Save Failed', err instanceof Error ? err.message : 'Could not move item to collection. Please try again.');
+    }
   }
 
   if (isLoading) {
@@ -100,6 +108,14 @@ export default function VaultScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
+
+      {/* Live price loading banner */}
+      {productsLoading && (
+        <View style={s.priceBanner}>
+          <ActivityIndicator size="small" color={Colors.accent} style={{ marginRight: 6 }} />
+          <Text style={s.priceBannerText}>Loading live prices…</Text>
+        </View>
+      )}
 
       {/* Header */}
       <View style={s.header}>
@@ -178,7 +194,7 @@ export default function VaultScreen() {
                         <Text style={[s.performerBadge, { color: accent }]}>{label}</Text>
                         <Text style={s.performerName} numberOfLines={1}>{e.product.name}</Text>
                         <Text style={[s.performerPct, { color: accent }]}>
-                          {(() => { const p = ((e.product.currentMarketPrice - e.item.purchasePrice) / e.item.purchasePrice) * 100; return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`; })()}
+                          {(() => { const p = e.item.purchasePrice > 0 ? ((e.product.currentMarketPrice - e.item.purchasePrice) / e.item.purchasePrice) * 100 : 0; return `${p >= 0 ? '+' : ''}${p.toFixed(1)}%`; })()}
                         </Text>
                       </View>
                     ) : null)}
@@ -202,7 +218,7 @@ export default function VaultScreen() {
                 item={e.item}
                 product={e.product}
                 onPress={() => setEditItem(e)}
-                onRemove={() => removeFromCollection(e.item.id)}
+                onRemove={() => removeFromCollection(e.item.id).catch(err => Alert.alert('Remove Failed', err instanceof Error ? err.message : 'Could not remove item.'))}
               />
             )}
             ItemSeparatorComponent={() => <View style={{ height: Spacing.sm }} />}
@@ -238,7 +254,7 @@ export default function VaultScreen() {
                 item={e.wItem}
                 product={e.product}
                 onPress={() => router.push(`/product/${e.product.id}`)}
-                onRemove={() => removeFromWatchlist(e.wItem.id)}
+                onRemove={() => removeFromWatchlist(e.wItem.id).catch(err => Alert.alert('Remove Failed', err instanceof Error ? err.message : 'Could not remove item.'))}
                 onMarkPurchased={() => setPurchaseItem({ wItem: e.wItem, product: e.product })}
               />
             )}
@@ -250,6 +266,13 @@ export default function VaultScreen() {
       <AddToCollectionModal
         visible={editItem !== null}
         product={editItem?.product ?? null}
+        initialValues={editItem ? {
+          quantity: editItem.item.quantity,
+          purchasePrice: editItem.item.purchasePrice,
+          purchaseDate: editItem.item.purchaseDate,
+          condition: editItem.item.condition,
+          notes: editItem.item.notes ?? '',
+        } : undefined}
         onClose={() => setEditItem(null)}
         onSave={handleUpdateItem}
       />
@@ -265,6 +288,8 @@ export default function VaultScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
+  priceBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 6, backgroundColor: 'rgba(139,92,246,0.10)', borderBottomWidth: 1, borderBottomColor: 'rgba(139,92,246,0.15)' },
+  priceBannerText: { fontSize: 11, color: Colors.accent, fontWeight: '600' },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.md },
   title: { fontSize: 28, fontWeight: '800', color: Colors.text1, letterSpacing: -1 },

@@ -7,7 +7,7 @@ import { scryfallCardArt } from '../data/scryfall';
 export interface CardHit {
   name: string;
   rarity: 'M' | 'R' | 'U' | 'C' | 'S';
-  price: string;
+  price: number;
   pullRate: string;
   pullPct: string;
   evContribution: string;
@@ -69,7 +69,7 @@ export function CardRow({ hit, isLast, packsTotal = 36 }: Props) {
       </LinearGradient>
 
       {/* Price */}
-      <Text style={styles.price}>{hit.price}</Text>
+      <Text style={styles.price}>${hit.price.toFixed(2)}</Text>
 
       {/* Pull rate — "1 in X" for single box, "~X.XX/case" for cases */}
       <View style={styles.pullCol}>

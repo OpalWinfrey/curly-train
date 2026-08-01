@@ -18,7 +18,7 @@ export type Condition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
 export interface CardHit {
   name: string;
   rarity: Rarity;
-  price: string;
+  price: number;
   pullRate: string;
   pullPct: string;
   evContribution: string;
@@ -135,7 +135,7 @@ export interface LiveEVData {
   expectedValue: number;
   evSegments: Array<EVSegment & { colorKey: string }>;
   topHits: CardHit[];
-  cardCounts: { mythics: number; rares: number; treatments: number; specialGuests: number };
+  cardCounts: { mythics: number; rares: number; treatments: number; specialGuests: number; serialized: number };
   lastUpdated: string;
 }
 

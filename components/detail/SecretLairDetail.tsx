@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
-  Pressable, StatusBar, Share,
+  Pressable, StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+
+import { DetailNavBar } from '../DetailNavBar';
 
 import { InvestmentScore } from '../InvestmentScore';
 import { PriceChart } from '../PriceChart';
@@ -14,6 +15,7 @@ import { IncludedCardRow } from '../IncludedCardRow';
 import { AddToCollectionModal } from '../AddToCollectionModal';
 import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
+import { formatPrice } from '../../data/formatPrice';
 import { useUserState } from '../../data/userState';
 import type { Product, Condition } from '../../data/types';
 
@@ -57,8 +59,8 @@ const rStyles = StyleSheet.create({
 });
 
 export function SecretLairDetail({ product }: Props) {
-  const router = useRouter();
-  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist } = useUserState();
+  const { addToCollection, addToWatchlist, isInCollection, isInWatchlist, preferences } = useUserState();
+  const { currency } = preferences;
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
 
@@ -90,23 +92,7 @@ export function SecretLairDetail({ product }: Props) {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
 
-      <View style={styles.nav}>
-        <Pressable style={styles.navBtn} onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.navBtnText}>‹</Text>
-        </Pressable>
-        <View style={styles.brand}>
-          <View style={styles.brandIcon}>
-            <Text style={{ fontSize: 10, color: Colors.accent, fontWeight: '800' }}>VM</Text>
-          </View>
-          <Text style={styles.brandName}>VAULT<Text style={styles.brandAccent}>MARK</Text></Text>
-        </View>
-        <View style={styles.navActions}>
-          <Pressable onPress={() => setShowWatchlistModal(true)} style={styles.navBtn} hitSlop={8}>
-            <Text style={[styles.navBtnIcon, inWatchlist && { color: Colors.danger }]}>{inWatchlist ? '♥' : '♡'}</Text>
-          </Pressable>
-          <Pressable style={styles.navBtn} hitSlop={8} onPress={() => Share.share({ message: `Check out ${product.setName} on VaultMark`, url: `https://vaultmark-sealed.vercel.app` })}><Text style={styles.navBtnIcon}>↑</Text></Pressable>
-        </View>
-      </View>
+      <DetailNavBar productName={product.setName} inWatchlist={inWatchlist} onWatchlist={() => setShowWatchlistModal(true)} />
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Hero */}
@@ -154,12 +140,12 @@ export function SecretLairDetail({ product }: Props) {
           <View>
             <View style={styles.sectionHead}><SectionHeader eyebrow="Market Data" title="Value Summary" /></View>
             <View style={styles.metricGrid}>
-              <MetricTile label="Original MSRP" value={`$${msrp.toFixed(2)}`} sub="Nonfoil" />
-              <MetricTile label="Current Sealed" value={product.currentMarketPrice > 0 ? `$${product.currentMarketPrice.toFixed(2)}` : 'N/A'}
+              <MetricTile label="Original MSRP" value={formatPrice(msrp, currency)} sub="Nonfoil" />
+              <MetricTile label="Current Sealed" value={product.currentMarketPrice > 0 ? formatPrice(product.currentMarketPrice, currency) : 'N/A'}
                 accent={product.currentMarketPrice > msrp ? Colors.success : Colors.danger} />
             </View>
             <View style={[styles.metricGrid, { marginTop: Spacing.sm }]}>
-              <MetricTile label="Card Singles" value={`$${totalCardValue.toFixed(2)}`}
+              <MetricTile label="Card Singles" value={formatPrice(totalCardValue, currency)}
                 accent={totalCardValue > msrp ? Colors.success : Colors.danger} />
               <MetricTile label="Singles vs MSRP"
                 value={`${cardVsMsrp >= 0 ? '+' : ''}$${cardVsMsrp.toFixed(2)}`}
@@ -218,7 +204,7 @@ export function SecretLairDetail({ product }: Props) {
           {product.priceHistory.length > 0 && (
             <View>
               <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={`$${product.currentMarketPrice.toFixed(2)}`} weekChange={weekChange} priceHistory={product.priceHistory} />
+              <PriceChart currentPrice={formatPrice(product.currentMarketPrice, currency)} weekChange={weekChange} priceHistory={product.priceHistory} />
             </View>
           )}
 
@@ -271,15 +257,6 @@ export function SecretLairDetail({ product }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
-  nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
-  navBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
-  navBtnText: { fontSize: 22, color: Colors.text2, lineHeight: 26, marginTop: -2 },
-  navBtnIcon: { fontSize: 16, color: Colors.text2 },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  brandIcon: { width: 26, height: 26, borderRadius: 7, backgroundColor: 'rgba(139,92,246,0.15)', borderWidth: 1, borderColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
-  brandName: { fontSize: 15, fontWeight: '800', letterSpacing: 0.5, color: '#fff' },
-  brandAccent: { color: Colors.accent },
-  navActions: { flexDirection: 'row', gap: 8 },
   scroll: { flex: 1 },
   hero: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl, paddingTop: Spacing.md },
   heroContent: { flexDirection: 'row', gap: Spacing.md },
