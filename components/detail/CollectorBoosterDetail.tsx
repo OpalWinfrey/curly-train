@@ -19,6 +19,7 @@ import { formatPrice } from '../../data/formatPrice';
 import { useUserState } from '../../data/userState';
 import { useProductArt } from '../../data/scryfall';
 import { useSetEV } from '../../data/useSetEV';
+import { usePriceHistory } from '../../data/usePriceHistory';
 import { computeInvestmentScore } from '../../data/computeScore';
 import type { Product, Condition } from '../../data/types';
 
@@ -40,6 +41,7 @@ export function CollectorBoosterDetail({ product }: Props) {
   const CASE_MULTIPLIER = isCase ? 6 : 1;
   const meta = product.collectorMetadata;
   const { loading: evLoading, evData } = useSetEV(product.setCode, product.productType);
+  const { priceHistory: liveHistory } = usePriceHistory(product.id);
   const isUnreleased = !!product.releaseDate && new Date(product.releaseDate) > new Date();
   const analysis = !isUnreleased && evData && product.investmentScore === undefined
     ? computeInvestmentScore(product, evData)
@@ -226,10 +228,10 @@ export function CollectorBoosterDetail({ product }: Props) {
           )}
 
           {/* Price History */}
-          {(showOverview || showPrice) && product.priceHistory.length > 0 && (
+          {(showOverview || showPrice) && (
             <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={formatPrice(product.currentMarketPrice, currency)} weekChange={weekChange} priceHistory={product.priceHistory} />
+              <View style={styles.sectionHead}><SectionHeader eyebrow="Price Trend" title="Price History" /></View>
+              <PriceChart currentPrice={formatPrice(product.currentMarketPrice, currency)} weekChange={weekChange} priceHistory={liveHistory} />
             </View>
           )}
 

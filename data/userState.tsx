@@ -122,7 +122,21 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
             : p;
         });
 
-      setProducts([...PRODUCTS, ...extra, ...pricedExpanded]);
+      const finalProducts = [...PRODUCTS, ...extra, ...pricedExpanded];
+      setProducts(finalProducts);
+
+      // Record daily price snapshot for every product with a known price
+      const today = new Date().toISOString().split('T')[0];
+      const snaps = finalProducts
+        .filter(p => p.currentMarketPrice > 0)
+        .map(p => ({ product_id: p.id, price: p.currentMarketPrice, recorded_at: today }));
+      // Batch insert in chunks of 50 to stay within request limits
+      for (let i = 0; i < snaps.length; i += 50) {
+        supabase
+          .from('price_snapshots')
+          .upsert(snaps.slice(i, i + 50), { onConflict: 'product_id,recorded_at' })
+          .then();
+      }
     } catch (err) {
       console.warn('[VaultMark] Scryfall fetch failed, using static catalog:', err);
     } finally {

@@ -17,6 +17,7 @@ import { AddToWatchlistModal } from '../AddToWatchlistModal';
 import { Colors, Spacing, Radius } from '../tokens';
 import { formatPrice } from '../../data/formatPrice';
 import { useUserState } from '../../data/userState';
+import { usePriceHistory } from '../../data/usePriceHistory';
 import type { Product, Condition } from '../../data/types';
 
 interface Props { product: Product }
@@ -67,6 +68,7 @@ export function SecretLairDetail({ product }: Props) {
   const inCollection = isInCollection(product.id);
   const inWatchlist = isInWatchlist(product.id);
   const meta = product.secretLairMetadata;
+  const { priceHistory: liveHistory } = usePriceHistory(product.id);
 
   const mainCards = (product.includedCards ?? []).filter(c => !c.isBonus);
   const bonusCards = (product.includedCards ?? []).filter(c => c.isBonus);
@@ -201,12 +203,10 @@ export function SecretLairDetail({ product }: Props) {
           )}
 
           {/* Price History */}
-          {product.priceHistory.length > 0 && (
-            <View>
-              <View style={styles.sectionHead}><SectionHeader eyebrow="30-Day Trend" title="Price History" /></View>
-              <PriceChart currentPrice={formatPrice(product.currentMarketPrice, currency)} weekChange={weekChange} priceHistory={product.priceHistory} />
-            </View>
-          )}
+          <View>
+            <View style={styles.sectionHead}><SectionHeader eyebrow="Price Trend" title="Price History" /></View>
+            <PriceChart currentPrice={formatPrice(product.currentMarketPrice, currency)} weekChange={weekChange} priceHistory={liveHistory} />
+          </View>
 
           {/* Investment Score */}
           {product.scoreBars && (
