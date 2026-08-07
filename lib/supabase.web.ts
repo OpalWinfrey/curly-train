@@ -7,8 +7,11 @@ const webStorage = {
 };
 
 const _env = process.env as unknown as Record<string, string>;
-const supabaseUrl = _env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = _env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+// Fall back to placeholders so createClient doesn't throw at module load time when
+// env vars aren't set (e.g. local build without .env.local). Auth calls will fail
+// gracefully and the user will remain on the sign-in screen.
+const supabaseUrl = _env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = _env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
