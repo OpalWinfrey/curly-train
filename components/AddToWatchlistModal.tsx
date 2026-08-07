@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   notesWrap: { height: 80, alignItems: 'flex-start', paddingVertical: Spacing.sm },
   currencySign: { fontSize: 16, color: Colors.text3, marginRight: 4 },
   input: { flex: 1, color: Colors.text1, fontSize: 16, fontWeight: '700', paddingVertical: 0 },
-  notesInput: { fontSize: 14, fontWeight: '400', height: 64, textAlignVertical: 'top' },
+  notesInput: { fontSize: 16, fontWeight: '400', height: 64, textAlignVertical: 'top' },
   hint: { fontSize: 11, fontWeight: '600', marginTop: 5 },
   hintGood: { color: Colors.success },
   hintBad: { color: Colors.warning },
