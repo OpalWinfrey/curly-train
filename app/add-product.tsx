@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
   Pressable, StatusBar, FlatList, ScrollView,
@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { SearchBar } from '../components/SearchBar';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
+import { useAuth } from '../lib/authContext';
 import { formatPrice, currencySymbol } from '../data/formatPrice';
 import type { Product, Condition } from '../data/types';
 
@@ -21,8 +22,15 @@ const CONDITIONS: Condition[] = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 
 export default function AddProductScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const { products, addToCollection, addToWatchlist, preferences } = useUserState();
   const { currency } = preferences;
+
+  useEffect(() => {
+    if (!session) {
+      router.replace('/(auth)/sign-in');
+    }
+  }, [session]);
 
   const [step, setStep] = useState<Step>('search');
   const [query, setQuery] = useState('');

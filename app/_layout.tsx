@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Tabs, useRouter } from 'expo-router';
+import React from 'react';
+import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from '../lib/authContext';
 import { UserStateProvider } from '../data/userState';
@@ -51,18 +51,9 @@ const icon_s = StyleSheet.create({
 });
 
 function AppContent() {
-  const { session, loading } = useAuth();
-  const router = useRouter();
+  const { loading } = useAuth();
 
-  useEffect(() => {
-    if (loading) return;
-    if (!session) {
-      router.replace('/(auth)/sign-in');
-    }
-  }, [loading, session]);
-
-  // Always render the Tabs navigator so Expo Router considers the root layout mounted.
-  // An overlay covers it while auth is loading or the redirect hasn't fired yet.
+  // Only block rendering while the auth state is being determined
   const showOverlay = loading;
 
   return (

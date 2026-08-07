@@ -12,6 +12,7 @@ import { EmptyState } from '../components/EmptyState';
 import { AddToCollectionModal } from '../components/AddToCollectionModal';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
+import { useAuth } from '../lib/authContext';
 import { formatPrice } from '../data/formatPrice';
 import type { Condition, CollectionItem, WatchlistItem, Product } from '../data/types';
 
@@ -20,12 +21,36 @@ type SortKey = 'value' | 'pnl' | 'name' | 'date';
 
 export default function VaultScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const { products, collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading, productsLoading, preferences } = useUserState();
   const { sellingFeePct, taxRatePct, currency } = preferences;
   const [segment, setSegment] = useState<Segment>('owned');
   const [sort, setSort] = useState<SortKey>('value');
   const [editItem, setEditItem] = useState<{ item: CollectionItem; product: Product } | null>(null);
   const [purchaseItem, setPurchaseItem] = useState<{ wItem: WatchlistItem; product: Product } | null>(null);
+
+  if (!session) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bg }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 }}>
+          <Text style={{ fontSize: 40 }}>◈</Text>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: Colors.text1 }}>Your Vault</Text>
+          <Text style={{ fontSize: 14, color: Colors.text3, textAlign: 'center' }}>
+            Sign in to track your MTG collection, monitor P&L, and manage your watchlist.
+          </Text>
+          <Pressable
+            style={{ backgroundColor: Colors.accent, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12, marginTop: 8 }}
+            onPress={() => router.push('/(auth)/sign-in')}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Sign In</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/(auth)/sign-up')}>
+            <Text style={{ fontSize: 13, color: Colors.text3 }}>Don't have an account? <Text style={{ color: Colors.accent, fontWeight: '700' }}>Sign up</Text></Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // — Collection logic —
   const enrichedCollection = collection
