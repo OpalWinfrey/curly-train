@@ -260,13 +260,14 @@ export default async function handler(req: Req, res: Res) {
       evContrib: specialGuestEVContrib(c),
       pullsPer36: specialGuests.length > 0 ? SPECIAL_GUEST_PER_BOX / specialGuests.length : 0,
     })),
-    // Serialized cards are always included regardless of EV — they are the headline chase hit
-    ...serializedCards.map(c => ({
+    // Serialized cards only appear in product types that actually contain them (collector boosters).
+    // Play booster boxes have SERIALIZED_PER_BOX=0, so don't pollute their hit list with serial variants.
+    ...(SERIALIZED_PER_BOX > 0 ? serializedCards.map(c => ({
       card: c,
       evContrib: serializedEVContrib(c),
       pullsPer36: serializedCards.length > 0 ? SERIALIZED_PER_BOX / serializedCards.length : 0,
       isSerialized: true,
-    })),
+    })) : []),
   ]
     .filter(h => h.isSerialized || usd(h.card.prices.usd) > 0.50)
     .sort((a, b) => {

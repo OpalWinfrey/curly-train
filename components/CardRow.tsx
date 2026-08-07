@@ -78,6 +78,11 @@ export function CardRow({ hit, isLast, packsTotal = 36 }: Props) {
             <Text style={styles.pullRate}>~{expectedCopies.toFixed(2)}</Text>
             <Text style={styles.pullPct}>per case</Text>
           </>
+        ) : hit.pullRate === '0' ? (
+          <>
+            <Text style={styles.pullRate}>—</Text>
+            <Text style={styles.pullPct}>N/A</Text>
+          </>
         ) : (
           <>
             <Text style={styles.pullRate}>1 in {hit.pullRate}</Text>
