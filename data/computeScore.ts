@@ -71,10 +71,11 @@ function toRationale(rec: Recommendation, product: Product, evData: LiveEVData, 
   }
 
   // Chase card
+  const pullRateText = topHit && topHit.pullRate !== '0' ? `, 1-in-${topHit.pullRate} packs` : '';
   if (topHit && topHit.price >= 20) {
-    parts.push(`Anchored by ${topHit.name} ($${topHit.price.toFixed(2)}, 1-in-${topHit.pullRate} packs) — a strong ceiling.`);
+    parts.push(`Anchored by ${topHit.name} ($${topHit.price.toFixed(2)}${pullRateText}) — a strong ceiling.`);
   } else if (topHit && topHit.price >= 8) {
-    parts.push(`Top hit: ${topHit.name} at $${topHit.price.toFixed(2)} (1-in-${topHit.pullRate} packs).`);
+    parts.push(`Top hit: ${topHit.name} at $${topHit.price.toFixed(2)}${pullRateText}.`);
   } else if (evData.cardCounts.specialGuests > 0) {
     parts.push(`${evData.cardCounts.specialGuests} Special Guest slot${evData.cardCounts.specialGuests > 1 ? 's' : ''} add meaningful upside variance.`);
   } else if (topHit) {

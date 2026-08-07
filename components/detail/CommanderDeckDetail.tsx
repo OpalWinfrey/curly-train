@@ -38,7 +38,9 @@ export function CommanderDeckDetail({ product }: Props) {
   const changeSign = product.priceChangeWeek >= 0 ? '+' : '';
   const weekChange = `${changeSign}$${Math.abs(product.priceChangeWeek).toFixed(2)} · ${changeSign}${product.priceChangePct.toFixed(2)}%`;
 
-  const { evData } = useSetEV(product.setCode, product.productType);
+  // Commander decks have no booster slot model — use the set's play booster as a proxy
+  // for set quality signals only (evRatio is not meaningful for pre-constructed decks).
+  const { evData } = useSetEV(product.setCode, 'play-booster-box');
   const { priceHistory: liveHistory } = usePriceHistory(product.id);
   const isUnreleased = !!product.releaseDate && new Date(product.releaseDate) > new Date();
   const analysis = !isUnreleased && evData && product.investmentScore === undefined

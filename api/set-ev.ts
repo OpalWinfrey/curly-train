@@ -77,6 +77,8 @@ function isTreatment(card: ScryfallCard): boolean {
     fe.includes('showcase') ||
     fe.includes('extendedart') ||
     fe.includes('borderless') ||
+    fe.includes('etched') ||   // etched foils (Commander Legends, etc.)
+    fe.includes('inverted') || // full-art foil treatments (Warhammer, etc.)
     pt.includes('boosterfun') ||
     pt.includes('buyabox')
   );
