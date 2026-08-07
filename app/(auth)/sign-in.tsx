@@ -77,6 +77,10 @@ export default function SignInScreen() {
             <Pressable onPress={() => router.push('/(auth)/sign-up')} style={s.link}>
               <Text style={s.linkText}>Don't have an account? <Text style={s.linkBold}>Sign up</Text></Text>
             </Pressable>
+
+            <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={s.link}>
+              <Text style={s.skipText}>Just browsing? <Text style={s.skipBold}>Skip for now →</Text></Text>
+            </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -108,4 +112,6 @@ const s = StyleSheet.create({
   link: { alignItems: 'center', paddingVertical: 8 },
   linkText: { fontSize: 14, color: Colors.text3 },
   linkBold: { color: Colors.accent, fontWeight: '700' },
+  skipText: { fontSize: 13, color: Colors.text3, opacity: 0.7 },
+  skipBold: { color: Colors.text2, fontWeight: '600' },
 });
