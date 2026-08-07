@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
   Pressable, StatusBar, FlatList, ScrollView,
@@ -10,7 +10,6 @@ import { useRouter } from 'expo-router';
 import { SearchBar } from '../components/SearchBar';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
-import { useAuth } from '../lib/authContext';
 import { formatPrice, currencySymbol } from '../data/formatPrice';
 import type { Product, Condition } from '../data/types';
 
@@ -22,15 +21,8 @@ const CONDITIONS: Condition[] = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 
 export default function AddProductScreen() {
   const router = useRouter();
-  const { session } = useAuth();
   const { products, addToCollection, addToWatchlist, preferences } = useUserState();
   const { currency } = preferences;
-
-  useEffect(() => {
-    if (!session) {
-      router.replace('/(auth)/sign-in');
-    }
-  }, [session]);
 
   const [step, setStep] = useState<Step>('search');
   const [query, setQuery] = useState('');
@@ -418,7 +410,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: Colors.text3, marginBottom: 6 },
   inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md, height: 48 },
   currSign: { fontSize: 16, color: Colors.text3, marginRight: 4 },
-  textInput: { flex: 1, color: Colors.text1, fontSize: 15, fontWeight: '600', paddingVertical: 0 },
+  textInput: { flex: 1, color: Colors.text1, fontSize: 16, fontWeight: '600', paddingVertical: 0 },
   qtyRow: { flexDirection: 'row' },
   qtyBtn: { width: 40, height: 48, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', borderRadius: Radius.md },
   qtyBtnText: { fontSize: 20, color: Colors.accent, lineHeight: 24 },

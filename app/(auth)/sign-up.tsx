@@ -124,7 +124,7 @@ const s = StyleSheet.create({
   input: {
     backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
     borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: 14,
-    fontSize: 15, color: Colors.text1,
+    fontSize: 16, color: Colors.text1,
   },
   btn: { backgroundColor: Colors.accent, borderRadius: Radius.md, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
   btnDisabled: { opacity: 0.6 },

@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   notesWrap: { height: 80, alignItems: 'flex-start', paddingVertical: Spacing.sm },
   currencySign: { fontSize: 15, color: Colors.text3, marginRight: 4 },
-  input: { flex: 1, color: Colors.text1, fontSize: 14, fontWeight: '600', paddingVertical: 0 },
+  input: { flex: 1, color: Colors.text1, fontSize: 16, fontWeight: '600', paddingVertical: 0 },
   notesInput: { height: 64, textAlignVertical: 'top' },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 0 },
   qtyBtn: {
