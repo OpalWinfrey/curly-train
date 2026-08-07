@@ -63,7 +63,7 @@ function AppContent() {
 
   // Always render the Tabs navigator so Expo Router considers the root layout mounted.
   // An overlay covers it while auth is loading or the redirect hasn't fired yet.
-  const showOverlay = loading || !session;
+  const showOverlay = loading;
 
   return (
     <UserStateProvider>
