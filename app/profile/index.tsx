@@ -8,6 +8,7 @@ import { useAuth } from '../../lib/authContext';
 import { useUserState } from '../../data/userState';
 import { Colors, Spacing, Radius } from '../../components/tokens';
 import type { UserProfile } from '../../data/types';
+import { isApproximateCurrency } from '../../data/formatPrice';
 
 const CSV_HEADER = 'productId,name,quantity,purchasePrice,purchaseDate,condition,notes';
 
@@ -291,6 +292,7 @@ export default function ProfileScreen() {
           <SettingRow
             label="Currency"
             value={preferences.currency}
+            note={isApproximateCurrency(preferences.currency) ? 'Fixed rate — not live FX, may be approximate' : undefined}
             onPress={() => updatePreferences({ currency: preferences.currency === 'USD' ? 'EUR' : preferences.currency === 'EUR' ? 'GBP' : 'USD' })}
           />
           <Div />
