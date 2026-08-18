@@ -1,3 +1,4 @@
+// Fixed conversion rates, not live FX — see isApproximateCurrency().
 const CURRENCY_CONFIG: Record<string, { rate: number; symbol: string }> = {
   USD: { rate: 1, symbol: '$' },
   EUR: { rate: 0.92, symbol: '€' },
@@ -11,4 +12,9 @@ export function formatPrice(amount: number, currency: string): string {
 
 export function currencySymbol(currency: string): string {
   return (CURRENCY_CONFIG[currency] ?? CURRENCY_CONFIG.USD).symbol;
+}
+
+/** True for any non-USD currency, since conversion uses a fixed rate rather than live FX. */
+export function isApproximateCurrency(currency: string): boolean {
+  return currency !== 'USD';
 }
