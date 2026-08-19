@@ -106,6 +106,7 @@ function AppContent() {
         <Tabs.Screen name="(auth)" options={{ href: null }} />
         <Tabs.Screen name="product/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
         <Tabs.Screen name="add-product" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+        <Tabs.Screen name="add-card-alert" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       </Tabs>
       {showOverlay && (
         <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center' }}>

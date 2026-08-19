@@ -8,21 +8,25 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { CollectionItemCard } from '../components/CollectionItemCard';
 import { WatchlistItemCard } from '../components/WatchlistItemCard';
+import { CardAlertCard } from '../components/CardAlertCard';
 import { EmptyState } from '../components/EmptyState';
 import { AddToCollectionModal } from '../components/AddToCollectionModal';
 import { Colors, Spacing, Radius } from '../components/tokens';
 import { useUserState } from '../data/userState';
+import { useCardAlertPrices } from '../data/useCardAlertPrices';
 import { useAuth } from '../lib/authContext';
 import { formatPrice } from '../data/formatPrice';
 import type { Condition, CollectionItem, WatchlistItem, Product } from '../data/types';
 
-type Segment = 'owned' | 'watching';
+type Segment = 'owned' | 'watching' | 'alerts';
 type SortKey = 'value' | 'pnl' | 'name' | 'date';
 
 export default function VaultScreen() {
   const router = useRouter();
   const { session } = useAuth();
-  const { products, collection, watchlist, removeFromCollection, updateCollectionItem, removeFromWatchlist, moveWatchlistToCollection, isLoading, productsLoading, preferences } = useUserState();
+  const { products, collection, watchlist, cardAlerts, removeFromCollection, updateCollectionItem, removeFromWatchlist, removeCardAlert, moveWatchlistToCollection, isLoading, productsLoading, preferences } = useUserState();
+  const { results: alertResults } = useCardAlertPrices(cardAlerts);
+  const triggeredAlerts = alertResults.filter(r => r.triggered);
   const { sellingFeePct, taxRatePct, currency } = preferences;
   const [segment, setSegment] = useState<Segment>('owned');
   const [sort, setSort] = useState<SortKey>('value');
@@ -145,8 +149,8 @@ export default function VaultScreen() {
       {/* Header */}
       <View style={s.header}>
         <Text style={s.title}>My Vault</Text>
-        <Pressable onPress={() => router.push('/add-product')} style={s.addBtn}>
-          <Text style={s.addBtnText}>+ Add</Text>
+        <Pressable onPress={() => router.push(segment === 'alerts' ? '/add-card-alert' : '/add-product')} style={s.addBtn}>
+          <Text style={s.addBtnText}>{segment === 'alerts' ? '+ Add Alert' : '+ Add'}</Text>
         </Pressable>
       </View>
 
@@ -166,6 +170,14 @@ export default function VaultScreen() {
         >
           <Text style={[s.segText, segment === 'watching' && s.segTextActive]}>
             Watching{watchlist.length > 0 ? ` (${watchlist.length})` : ''}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[s.seg, segment === 'alerts' && s.segActive]}
+          onPress={() => setSegment('alerts')}
+        >
+          <Text style={[s.segText, segment === 'alerts' && s.segTextActive]}>
+            Alerts{cardAlerts.length > 0 ? ` (${cardAlerts.length})` : ''}
           </Text>
         </Pressable>
       </View>
@@ -281,6 +293,40 @@ export default function VaultScreen() {
                 onPress={() => router.push(`/product/${e.product.id}`)}
                 onRemove={() => removeFromWatchlist(e.wItem.id).catch(err => Alert.alert('Remove Failed', err instanceof Error ? err.message : 'Could not remove item.'))}
                 onMarkPurchased={() => setPurchaseItem({ wItem: e.wItem, product: e.product })}
+              />
+            )}
+            ItemSeparatorComponent={() => <View style={{ height: Spacing.sm }} />}
+          />
+        )
+      )}
+
+      {/* Alerts Tab */}
+      {segment === 'alerts' && (
+        cardAlerts.length === 0 ? (
+          <EmptyState
+            icon="🔔"
+            title="No Card Alerts Yet"
+            subtitle="Get notified when a specific single is listed at or below your target price."
+            ctaLabel="Add a Card Alert"
+            onCta={() => router.push('/add-card-alert')}
+          />
+        ) : (
+          <FlatList
+            data={alertResults}
+            keyExtractor={r => r.alert.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={s.list}
+            ListHeaderComponent={
+              triggeredAlerts.length > 0 ? (
+                <View style={s.alertBanner}>
+                  <Text style={s.alertText}>✓ {triggeredAlerts.length} card{triggeredAlerts.length !== 1 ? 's are' : ' is'} at or below your target price</Text>
+                </View>
+              ) : undefined
+            }
+            renderItem={({ item }) => (
+              <CardAlertCard
+                entry={item}
+                onRemove={() => removeCardAlert(item.alert.id).catch(err => Alert.alert('Remove Failed', err instanceof Error ? err.message : 'Could not remove alert.'))}
               />
             )}
             ItemSeparatorComponent={() => <View style={{ height: Spacing.sm }} />}

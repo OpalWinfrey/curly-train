@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/authContext';
-import type { CollectionItem, WatchlistItem, Product, UserPreferences } from './types';
+import type { CollectionItem, WatchlistItem, CardAlert, Product, UserPreferences } from './types';
 import { PRODUCTS, makeHistory } from './products';
 import { fetchSealedPrices } from './manapool';
 import { fetchScryfallSets } from './scryfall';
@@ -20,6 +20,7 @@ interface UserState {
   refreshProducts: () => void;
   collection: CollectionItem[];
   watchlist: WatchlistItem[];
+  cardAlerts: CardAlert[];
   recentlyViewed: string[];
   isLoading: boolean;
   preferences: UserPreferences;
@@ -29,6 +30,8 @@ interface UserState {
   addToWatchlist: (item: Omit<WatchlistItem, 'id' | 'userId'>) => Promise<void>;
   updateWatchlistItem: (id: string, updates: Partial<WatchlistItem>) => Promise<void>;
   removeFromWatchlist: (id: string) => Promise<void>;
+  addCardAlert: (item: Omit<CardAlert, 'id' | 'userId'>) => Promise<void>;
+  removeCardAlert: (id: string) => Promise<void>;
   moveWatchlistToCollection: (watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string, condition?: CollectionItem['condition']) => Promise<void>;
   updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void>;
   addRecentlyViewed: (productId: string) => void;
@@ -64,6 +67,20 @@ function toWatchlistItem(row: Record<string, unknown>): WatchlistItem {
   };
 }
 
+function toCardAlert(row: Record<string, unknown>): CardAlert {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    scryfallId: row.scryfall_id as string,
+    cardName: row.card_name as string,
+    setCode: row.set_code as string,
+    collectorNumber: row.collector_number as string,
+    finish: (row.finish as CardAlert['finish']) ?? 'nonfoil',
+    targetPriceCents: Number(row.target_price_cents),
+    dateAdded: (row.date_added as string) ?? '',
+  };
+}
+
 export function UserStateProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -72,6 +89,7 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   const [productsLoading, setProductsLoading] = useState(true);
   const [collection, setCollection] = useState<CollectionItem[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [cardAlerts, setCardAlerts] = useState<CardAlert[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFS);
   const [isLoading, setIsLoading] = useState(true);
@@ -153,10 +171,12 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     Promise.all([
       supabase.from('collection_items').select('*').eq('user_id', userId),
       supabase.from('watchlist_items').select('*').eq('user_id', userId),
+      supabase.from('card_alerts').select('*').eq('user_id', userId),
       supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(),
-    ]).then(([col, watch, prefs]) => {
+    ]).then(([col, watch, alerts, prefs]) => {
       if (col.data) setCollection(col.data.map(toCollectionItem));
       if (watch.data) setWatchlist(watch.data.map(toWatchlistItem));
+      if (alerts.data) setCardAlerts(alerts.data.map(toCardAlert));
       if (prefs.data) {
         setPreferences({
           currency: prefs.data.currency,
@@ -256,6 +276,29 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     setWatchlist(prev => prev.filter(w => w.id !== id));
   }, [userId]);
 
+  const addCardAlert = useCallback(async (item: Omit<CardAlert, 'id' | 'userId'>) => {
+    if (!userId) return;
+    const { data, error } = await supabase.from('card_alerts').insert({
+      user_id: userId,
+      scryfall_id: item.scryfallId,
+      card_name: item.cardName,
+      set_code: item.setCode,
+      collector_number: item.collectorNumber,
+      finish: item.finish,
+      target_price_cents: item.targetPriceCents,
+      date_added: item.dateAdded,
+    }).select().single();
+    if (error) throw new Error(error.message);
+    if (data) setCardAlerts(prev => [...prev, toCardAlert(data)]);
+  }, [userId]);
+
+  const removeCardAlert = useCallback(async (id: string) => {
+    if (!userId) return;
+    const { error } = await supabase.from('card_alerts').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    setCardAlerts(prev => prev.filter(a => a.id !== id));
+  }, [userId]);
+
   const moveWatchlistToCollection = useCallback(async (
     watchlistId: string, purchasePrice: number, quantity: number, purchaseDate: string, notes?: string, condition: CollectionItem['condition'] = 'NM'
   ) => {
@@ -300,9 +343,10 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   return (
     <UserStateContext.Provider value={{
       products, productsLoading, refreshProducts: loadProducts,
-      collection, watchlist, recentlyViewed, isLoading, preferences,
+      collection, watchlist, cardAlerts, recentlyViewed, isLoading, preferences,
       addToCollection, updateCollectionItem, removeFromCollection,
       addToWatchlist, updateWatchlistItem, removeFromWatchlist,
+      addCardAlert, removeCardAlert,
       moveWatchlistToCollection, updatePreferences, addRecentlyViewed,
       isInCollection, isInWatchlist, getCollectionItem, getWatchlistItem,
     }}>

@@ -65,3 +65,42 @@ export async function fetchScryfallSets(): Promise<Record<string, ScryfallSetMet
   }
   return map;
 }
+
+export interface ScryfallCardSummary {
+  scryfallId: string;
+  name: string;
+  setCode: string;
+  setName: string;
+  collectorNumber: string;
+  imageUri: string | null;
+}
+
+interface ScryfallCard {
+  id: string;
+  name: string;
+  set: string;
+  set_name: string;
+  collector_number: string;
+  image_uris?: { art_crop?: string };
+  card_faces?: Array<{ image_uris?: { art_crop?: string } }>;
+}
+
+/** Search cards by name for the card-alert picker. Returns [] if nothing matches. */
+export async function searchCards(query: string): Promise<ScryfallCardSummary[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(trimmed)}&unique=cards&order=name`);
+  if (res.status === 404) return []; // Scryfall returns 404 for "no cards found"
+  if (!res.ok) throw new Error(`Scryfall search error: ${res.status}`);
+
+  const data = await res.json();
+  return ((data.data ?? []) as ScryfallCard[]).map(card => ({
+    scryfallId: card.id,
+    name: card.name,
+    setCode: card.set.toUpperCase(),
+    setName: card.set_name,
+    collectorNumber: card.collector_number,
+    imageUri: card.image_uris?.art_crop ?? card.card_faces?.[0]?.image_uris?.art_crop ?? null,
+  }));
+}

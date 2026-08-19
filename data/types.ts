@@ -131,6 +131,18 @@ export interface WatchlistItem {
   notes?: string;
 }
 
+export interface CardAlert {
+  id: string;
+  userId?: string;
+  scryfallId: string;
+  cardName: string;
+  setCode: string;
+  collectorNumber: string;
+  finish: 'nonfoil' | 'foil';
+  targetPriceCents: number;
+  dateAdded: string;
+}
+
 export interface LiveEVData {
   expectedValue: number;
   evSegments: Array<EVSegment & { colorKey: string }>;
