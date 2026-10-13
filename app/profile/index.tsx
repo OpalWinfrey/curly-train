@@ -3,6 +3,7 @@ import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
   Pressable, StatusBar, TextInput, ActivityIndicator, Share, Alert, Modal,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/authContext';
 import { useUserState } from '../../data/userState';
@@ -37,6 +38,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Div() { return <View style={ps.divider} />; }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { session, signOut } = useAuth();
   const { collection, products, preferences, updatePreferences, addToCollection } = useUserState();
 
@@ -53,8 +55,12 @@ export default function ProfileScreen() {
   const [importError, setImportError] = useState('');
 
   useEffect(() => {
-    if (!session) return;
-    supabase.from('profiles').select('*').eq('id', session.user.id).single()
+    if (!session) {
+      setLoadingProfile(false);
+      return;
+    }
+    setLoadingProfile(true);
+    supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
       .then(({ data }) => {
         if (data) {
           const p: UserProfile = {
@@ -72,9 +78,9 @@ export default function ProfileScreen() {
           setBio(data.bio ?? '');
           setIsPublic(data.is_public ?? true);
         }
-        setLoadingProfile(false);
-      });
-  }, [session]);
+      }, () => {})
+      .then(() => setLoadingProfile(false));
+  }, [session?.user.id]);
 
   async function saveProfile() {
     if (!session) return;
@@ -181,6 +187,27 @@ export default function ProfileScreen() {
   }
 
   const initials = (displayName || 'VM').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+  if (!session) {
+    return (
+      <SafeAreaView style={ps.safe}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
+        <View style={ps.signedOutWrap}>
+          <Text style={ps.signedOutIcon}>◉</Text>
+          <Text style={ps.signedOutTitle}>Your Profile</Text>
+          <Text style={ps.signedOutText}>
+            Sign in to set up your profile, share your collection, and sync your settings.
+          </Text>
+          <Pressable style={ps.signedOutBtn} onPress={() => router.push('/(auth)/sign-in')}>
+            <Text style={ps.signedOutBtnText}>Sign In</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/(auth)/sign-up')}>
+            <Text style={ps.signedOutLink}>Don't have an account? <Text style={ps.signedOutLinkAccent}>Sign up</Text></Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loadingProfile) {
     return (
@@ -402,6 +429,14 @@ export default function ProfileScreen() {
 const ps = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.bg },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  signedOutWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 },
+  signedOutIcon: { fontSize: 40, color: Colors.accent },
+  signedOutTitle: { fontSize: 20, fontWeight: '800', color: Colors.text1 },
+  signedOutText: { fontSize: 14, color: Colors.text3, textAlign: 'center' },
+  signedOutBtn: { backgroundColor: Colors.accent, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12, marginTop: 8 },
+  signedOutBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  signedOutLink: { fontSize: 13, color: Colors.text3 },
+  signedOutLinkAccent: { color: Colors.accent, fontWeight: '700' },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: Spacing.lg, gap: Spacing.lg, paddingTop: Spacing.xl, paddingBottom: Spacing.xxl },
   profileHeader: { flexDirection: 'row', gap: Spacing.md, alignItems: 'flex-start' },

@@ -16,7 +16,13 @@ export default function PublicProfileScreen() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!username) return;
+    if (!username) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setNotFound(false);
     supabase
       .from('profiles')
       .select('*')
@@ -37,8 +43,8 @@ export default function PublicProfileScreen() {
         } else {
           setNotFound(true);
         }
-        setLoading(false);
-      });
+      }, () => setNotFound(true))
+      .then(() => setLoading(false));
   }, [username]);
 
   const initials = (profile?.displayName || username || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
