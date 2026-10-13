@@ -165,6 +165,13 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { loadProducts(); }, [loadProducts]);
 
   useEffect(() => {
+    // Clear the previous account's data so it doesn't linger after sign-out
+    // or leak into the next account that signs in on this device.
+    setCollection([]);
+    setWatchlist([]);
+    setCardAlerts([]);
+    setRecentlyViewed([]);
+    setPreferences(DEFAULT_PREFS);
     if (!userId) { setIsLoading(false); return; }
     setIsLoading(true);
 
@@ -197,9 +204,14 @@ export function UserStateProvider({ children }: { children: React.ReactNode }) {
     if (!userId) return;
     const existing = collection.find(c => c.productId === item.productId);
     if (existing) {
+      // Blend into a weighted-average cost basis rather than overwriting it
+      const quantity = existing.quantity + item.quantity;
+      const purchasePrice = Math.round(
+        ((existing.purchasePrice * existing.quantity + item.purchasePrice * item.quantity) / quantity) * 100
+      ) / 100;
       const updates = {
-        quantity: existing.quantity + item.quantity,
-        purchase_price: item.purchasePrice,
+        quantity,
+        purchase_price: purchasePrice,
         purchase_date: item.purchaseDate,
         condition: item.condition,
         notes: item.notes ?? existing.notes,

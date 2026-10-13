@@ -113,7 +113,10 @@ const styles = StyleSheet.create({
   gaugeWrap: { width: 100, height: 100, position: 'relative', flexShrink: 0 },
   gaugeCenterAbs: {
     position: 'absolute',
-    inset: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },

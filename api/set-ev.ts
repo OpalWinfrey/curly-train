@@ -241,7 +241,7 @@ export default async function handler(req: Req, res: Res) {
 
   // ── Top hits sorted by EV contribution ───────────────────────────────────
   type HitInput = { card: ScryfallCard; evContrib: number; pullsPer36: number; isSerialized?: boolean };
-  const hitPool: HitInput[] = [
+  const hitPool: HitInput[] = ([
     ...mythics.map(c => ({
       card: c,
       evContrib: mythicEVContrib(c),
@@ -270,7 +270,7 @@ export default async function handler(req: Req, res: Res) {
       pullsPer36: serializedCards.length > 0 ? SERIALIZED_PER_BOX / serializedCards.length : 0,
       isSerialized: true,
     })) : []),
-  ]
+  ] as HitInput[])
     .filter(h => h.isSerialized || usd(h.card.prices.usd) > 0.50)
     .sort((a, b) => {
       // Serialized cards always sort to the top regardless of EV contribution

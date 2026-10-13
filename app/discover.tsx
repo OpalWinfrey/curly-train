@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { ScrollView, View, Text, StyleSheet, SafeAreaView, StatusBar, FlatList, Pressable, Alert } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, SafeAreaView, StatusBar, FlatList, Pressable } from 'react-native';
+import { showAlert } from '../lib/alert';
 import { useRouter } from 'expo-router';
 
 import { SearchBar } from '../components/SearchBar';
@@ -86,7 +87,7 @@ export default function DiscoverScreen() {
         }
       }
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not update watchlist. Please try again.');
+      showAlert('Error', err instanceof Error ? err.message : 'Could not update watchlist. Please try again.');
     }
   }
 

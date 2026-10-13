@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, SafeAreaView,
-  Pressable, StatusBar, TextInput, ActivityIndicator, Share, Alert, Modal,
+  Pressable, StatusBar, TextInput, ActivityIndicator, Modal,
 } from 'react-native';
+import { showAlert } from '../../lib/alert';
+import { shareOrCopy } from '../../lib/share';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/authContext';
 import { useUserState } from '../../data/userState';
 import { Colors, Spacing, Radius } from '../../components/tokens';
-import type { UserProfile } from '../../data/types';
+import type { UserProfile, CollectionItem, Condition } from '../../data/types';
 import { isApproximateCurrency } from '../../data/formatPrice';
 
+const CONDITIONS: Condition[] = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 const CSV_HEADER = 'productId,name,quantity,purchasePrice,purchaseDate,condition,notes';
 
 function SettingRow({ label, value, onPress, note }: { label: string; value?: string; onPress?: () => void; note?: string }) {
@@ -53,6 +56,7 @@ export default function ProfileScreen() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (!session) {
@@ -85,15 +89,16 @@ export default function ProfileScreen() {
   async function saveProfile() {
     if (!session) return;
     setSaving(true);
-    const { error } = await supabase.from('profiles').update({
+    const { error } = await supabase.from('profiles').upsert({
+      id: session.user.id,
       display_name: displayName.trim(),
       username: username.trim().toLowerCase() || null,
       bio: bio.trim(),
       is_public: isPublic,
-    }).eq('id', session.user.id);
+    });
     setSaving(false);
     if (error) {
-      Alert.alert('Error', error.message);
+      showAlert('Error', error.message);
     } else {
       setDirty(false);
     }
@@ -101,14 +106,14 @@ export default function ProfileScreen() {
 
   async function handleShare() {
     const uname = username.trim().toLowerCase();
-    if (!uname) { Alert.alert('Set a username first to get a shareable link.'); return; }
-    const url = `https://vaultmark-sealed.vercel.app`;
+    if (!uname) { showAlert('Set a username first to get a shareable link.'); return; }
+    const url = `https://vaultmark-sealed.vercel.app/profile/${uname}`;
     const shareValue = collection
       .reduce((s, item) => {
         const p = products.find(pr => pr.id === item.productId);
         return s + (p ? p.currentMarketPrice * item.quantity : 0);
       }, 0);
-    await Share.share({
+    await shareOrCopy({
       title: 'My VaultMark Profile',
       message: `Check out my MTG collection on VaultMark!\n\n${collection.length} product${collection.length !== 1 ? 's' : ''} · $${shareValue.toFixed(2)} value\n\n${url}`,
     });
@@ -116,7 +121,7 @@ export default function ProfileScreen() {
 
   async function exportCSV() {
     if (collection.length === 0) {
-      Alert.alert('Nothing to export', 'Add some products to your collection first.');
+      showAlert('Nothing to export', 'Add some products to your collection first.');
       return;
     }
     const header = 'Product ID,Name,Quantity,Purchase Price,Purchase Date,Condition,Notes';
@@ -127,7 +132,7 @@ export default function ProfileScreen() {
       return `${item.productId},"${name}",${item.quantity},${item.purchasePrice},${item.purchaseDate},${item.condition ?? ''},"${notes}"`;
     });
     const csv = [header, ...rows].join('\n');
-    await Share.share({ title: 'VaultMark Collection', message: csv });
+    await shareOrCopy({ title: 'VaultMark Collection', message: csv });
   }
 
   function parseCSVLine(line: string): string[] {
@@ -149,41 +154,60 @@ export default function ProfileScreen() {
     return fields;
   }
 
-  function handleImport() {
+  async function handleImport() {
     setImportError('');
     const lines = importText.trim().split('\n').filter(l => l.trim());
-    const dataLines = lines[0]?.startsWith('productId') ? lines.slice(1) : lines;
+    // Accept both the import template header and the header exportCSV writes
+    const dataLines = /^"?product\s?id/i.test(lines[0] ?? '') ? lines.slice(1) : lines;
     if (dataLines.length === 0) {
       setImportError('No rows found. Paste CSV rows below the header.');
       return;
     }
-    let imported = 0;
     const errors: string[] = [];
+    // Merge repeated product rows so each product is written once
+    const rows = new Map<string, Omit<CollectionItem, 'id' | 'userId'>>();
     for (let i = 0; i < dataLines.length; i++) {
       const parts = parseCSVLine(dataLines[i]);
       if (parts.length < 5) { errors.push(`Row ${i + 1}: not enough columns`); continue; }
-      const [productId, , qtyStr, priceStr, purchaseDate, condition, ...notesParts] = parts;
+      const [rawId, , qtyStr, priceStr, rawDate, rawCondition, ...notesParts] = parts;
+      const productId = rawId.trim();
       const quantity = parseInt(qtyStr, 10);
       const purchasePrice = parseFloat(priceStr);
-      if (!productId.trim()) { errors.push(`Row ${i + 1}: missing productId`); continue; }
+      if (!productId) { errors.push(`Row ${i + 1}: missing productId`); continue; }
       if (isNaN(quantity) || quantity < 1) { errors.push(`Row ${i + 1}: invalid quantity`); continue; }
       if (isNaN(purchasePrice) || purchasePrice < 0) { errors.push(`Row ${i + 1}: invalid price`); continue; }
-      addToCollection({
-        productId: productId.trim(),
-        quantity,
-        purchasePrice,
-        purchaseDate: purchaseDate?.trim() ?? new Date().toISOString().split('T')[0],
-        condition: (condition?.trim() as 'NM' | 'LP' | 'MP' | 'HP' | 'DMG') ?? 'NM',
-        notes: notesParts.join(',').trim() || undefined,
+      const condition = rawCondition?.trim().toUpperCase();
+      const prev = rows.get(productId);
+      const totalQty = (prev?.quantity ?? 0) + quantity;
+      rows.set(productId, {
+        productId,
+        quantity: totalQty,
+        purchasePrice: prev
+          ? Math.round(((prev.purchasePrice * prev.quantity + purchasePrice * quantity) / totalQty) * 100) / 100
+          : purchasePrice,
+        purchaseDate: rawDate?.trim() || prev?.purchaseDate || new Date().toISOString().split('T')[0],
+        condition: CONDITIONS.includes(condition as Condition) ? condition as Condition : prev?.condition ?? 'NM',
+        notes: notesParts.join(',').trim() || prev?.notes,
       });
-      imported++;
     }
-    if (errors.length > 0) setImportError(errors.join('\n'));
-    if (imported > 0) {
-      setShowImportModal(false);
-      setImportText('');
-      Alert.alert('Import complete', `${imported} item${imported !== 1 ? 's' : ''} added to your collection.`);
+    setImporting(true);
+    let imported = 0;
+    for (const item of rows.values()) {
+      try {
+        await addToCollection(item);
+        imported++;
+      } catch (err) {
+        errors.push(`${item.productId}: ${err instanceof Error ? err.message : 'could not save'}`);
+      }
     }
+    setImporting(false);
+    if (errors.length > 0) {
+      setImportError(`${imported > 0 ? `Imported ${imported}. ` : ''}${errors.length} problem${errors.length !== 1 ? 's' : ''}:\n${errors.join('\n')}`);
+      return;
+    }
+    setShowImportModal(false);
+    setImportText('');
+    showAlert('Import complete', `${imported} item${imported !== 1 ? 's' : ''} added to your collection.`);
   }
 
   const initials = (displayName || 'VM').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -381,7 +405,7 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        <Pressable style={ps.signOutBtn} onPress={() => Alert.alert('Sign Out', 'Are you sure?', [
+        <Pressable style={ps.signOutBtn} onPress={() => showAlert('Sign Out', 'Are you sure?', [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Sign Out', style: 'destructive', onPress: signOut },
         ])}>
@@ -415,8 +439,8 @@ export default function ProfileScreen() {
               <Pressable style={[ps.modalBtn, ps.modalBtnSecondary]} onPress={() => setShowImportModal(false)}>
                 <Text style={ps.modalBtnSecText}>Cancel</Text>
               </Pressable>
-              <Pressable style={[ps.modalBtn, ps.modalBtnPrimary]} onPress={handleImport}>
-                <Text style={ps.modalBtnPriText}>Import</Text>
+              <Pressable style={[ps.modalBtn, ps.modalBtnPrimary]} onPress={handleImport} disabled={importing}>
+                <Text style={ps.modalBtnPriText}>{importing ? 'Importing…' : 'Import'}</Text>
               </Pressable>
             </View>
           </View>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Share } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { shareOrCopy } from '../lib/share';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing } from './tokens';
 
@@ -29,7 +30,7 @@ export function DetailNavBar({ productName, inWatchlist, onWatchlist }: Props) {
         <Pressable
           style={styles.navBtn}
           hitSlop={8}
-          onPress={() => Share.share({ message: `Check out ${productName} on VaultMark`, url: 'https://vaultmark-sealed.vercel.app' })}
+          onPress={() => shareOrCopy({ message: `Check out ${productName} on VaultMark`, url: 'https://vaultmark-sealed.vercel.app' })}
         >
           <Text style={styles.navBtnIcon}>↑</Text>
         </Pressable>

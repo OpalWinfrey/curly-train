@@ -18,7 +18,7 @@ function makeEVData(overrides: Partial<LiveEVData> = {}): LiveEVData {
       { label: 'Bulk', percentage: 20, amount: '$20.00', color: '#00f', colorKey: 'bulk' },
     ],
     topHits: [],
-    cardCounts: { mythics: 4, rares: 10, treatments: 2, specialGuests: 0 },
+    cardCounts: { mythics: 4, rares: 10, treatments: 2, specialGuests: 0, serialized: 0 },
     lastUpdated: '2024-01-01',
     ...overrides,
   };
@@ -83,15 +83,15 @@ describe('setQualityScore', () => {
 
 describe('chaseCeilingScore', () => {
   it('returns 25 when top card is >= $50', () => {
-    const data = makeEVData({ topHits: [{ name: 'Ragavan', rarity: 'M', price: '$75.00', pullRate: '1:20', pullPct: '5%', evContribution: '$3.75', artColors: ['#f00', '#ff0'], artInitial: 'R' }] });
+    const data = makeEVData({ topHits: [{ name: 'Ragavan', rarity: 'M', price: 75.00, pullRate: '1:20', pullPct: '5%', evContribution: '$3.75', artColors: ['#f00', '#ff0'], artInitial: 'R' }] });
     expect(chaseCeilingScore(data)).toBe(25);
   });
   it('returns 18 when top card is $25-$49', () => {
-    const data = makeEVData({ topHits: [{ name: 'Thoughtseize', rarity: 'R', price: '$30.00', pullRate: '1:10', pullPct: '10%', evContribution: '$3.00', artColors: ['#000', '#333'], artInitial: 'T' }] });
+    const data = makeEVData({ topHits: [{ name: 'Thoughtseize', rarity: 'R', price: 30.00, pullRate: '1:10', pullPct: '10%', evContribution: '$3.00', artColors: ['#000', '#333'], artInitial: 'T' }] });
     expect(chaseCeilingScore(data)).toBe(18);
   });
   it('returns 10 when top card is $10-$24', () => {
-    const data = makeEVData({ topHits: [{ name: 'Counterspell', rarity: 'R', price: '$15.00', pullRate: '1:8', pullPct: '12%', evContribution: '$1.88', artColors: ['#00f', '#0ff'], artInitial: 'C' }] });
+    const data = makeEVData({ topHits: [{ name: 'Counterspell', rarity: 'R', price: 15.00, pullRate: '1:8', pullPct: '12%', evContribution: '$1.88', artColors: ['#00f', '#0ff'], artInitial: 'C' }] });
     expect(chaseCeilingScore(data)).toBe(10);
   });
   it('returns 4 when no top hits', () => {
@@ -140,7 +140,7 @@ describe('computeInvestmentScore', () => {
     };
     const evData = makeEVData({
       expectedValue: 150,
-      topHits: [{ name: 'Big Card', rarity: 'M', price: '$60.00', pullRate: '1:20', pullPct: '5%', evContribution: '$3.00', artColors: ['#f00', '#ff0'], artInitial: 'B' }],
+      topHits: [{ name: 'Big Card', rarity: 'M', price: 60.00, pullRate: '1:20', pullPct: '5%', evContribution: '$3.00', artColors: ['#f00', '#ff0'], artInitial: 'B' }],
     });
     const result = computeInvestmentScore(product, evData);
     expect(result.investmentScore).toBeGreaterThan(0);
